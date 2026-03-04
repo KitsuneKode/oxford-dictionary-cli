@@ -1,7 +1,8 @@
 import type { DictionaryStore } from "../db/store";
+import { buildLookupCandidates } from "../domain/query-candidates";
 import { fetchOnlineEnrichment } from "../enrich/provider";
-import type { LookupOptions, OnlineEnrichment, OxfConfig } from "../types";
-import { askDetailChoice } from "../ui/prompt";
+import type { LookupOptions, OnlineEnrichment, OxfConfig, Suggestion } from "../types";
+import { askDetailChoice, askSuggestionChoice } from "../ui/prompt";
 import {
   renderAntonyms,
   renderCard,
@@ -20,6 +21,43 @@ interface LookupCommandInput {
   store: DictionaryStore;
 }
 
+const ONLINE_FALLBACK_TIMEOUT_MS = 900;
+
+function mergeSuggestions(suggestionsBySeed: Suggestion[][], limit: number): Suggestion[] {
+  const merged = new Map<string, Suggestion>();
+
+  for (const suggestions of suggestionsBySeed) {
+    for (const suggestion of suggestions) {
+      const existing = merged.get(suggestion.lemma);
+      if (!existing) {
+        merged.set(suggestion.lemma, suggestion);
+        continue;
+      }
+
+      merged.set(suggestion.lemma, {
+        lemma: suggestion.lemma,
+        distance: Math.min(existing.distance, suggestion.distance),
+        frequencyRank: Math.min(
+          existing.frequencyRank ?? Number.MAX_SAFE_INTEGER,
+          suggestion.frequencyRank ?? Number.MAX_SAFE_INTEGER,
+        ),
+      });
+    }
+  }
+
+  return [...merged.values()]
+    .sort((a, b) => {
+      if (a.distance !== b.distance) {
+        return a.distance - b.distance;
+      }
+
+      return (
+        (a.frequencyRank ?? Number.MAX_SAFE_INTEGER) - (b.frequencyRank ?? Number.MAX_SAFE_INTEGER)
+      );
+    })
+    .slice(0, limit);
+}
+
 function isCacheFresh(fetchedAt: number, ttlHours: number): boolean {
   return Date.now() - fetchedAt <= ttlHours * 60 * 60 * 1000;
 }
@@ -29,6 +67,7 @@ async function getOnlineEnrichment(
   options: LookupOptions,
   config: OxfConfig,
   store: DictionaryStore,
+  timeoutMsOverride?: number,
 ): Promise<OnlineEnrichment | null> {
   const cached = store.getOnlineCache(word);
 
@@ -37,7 +76,8 @@ async function getOnlineEnrichment(
   }
 
   try {
-    const enrichment = await fetchOnlineEnrichment(word, options.timeoutMs);
+    const timeoutMs = timeoutMsOverride ?? options.timeoutMs;
+    const enrichment = await fetchOnlineEnrichment(word, timeoutMs);
     if (!enrichment) {
       return null;
     }
@@ -52,28 +92,102 @@ async function getOnlineEnrichment(
 export async function runLookupCommand(input: LookupCommandInput): Promise<number> {
   const { word, options, config, store } = input;
   const colorEnabled = config.color && !options.noColor && Boolean(process.stdout.isTTY);
+  const lookupCandidates = buildLookupCandidates(word);
 
-  const entry = store.lookupExact(word) ?? store.lookupByLemmaVariants(word);
+  let resolvedBy: string | null = null;
+  let showResolvedBanner = false;
+  let entry = store.lookupExact(word) ?? store.lookupByLemmaVariants(word);
+  let onlineDirectMatch: OnlineEnrichment | null = null;
 
   if (!entry) {
-    const suggestions = store.suggest(word, 6);
+    onlineDirectMatch = await getOnlineEnrichment(
+      word,
+      options,
+      config,
+      store,
+      Math.min(options.timeoutMs, ONLINE_FALLBACK_TIMEOUT_MS),
+    );
+
+    if (onlineDirectMatch) {
+      if (options.json) {
+        console.log(
+          JSON.stringify(
+            {
+              word,
+              found: true,
+              source: "online-exact",
+              online: onlineDirectMatch,
+            },
+            null,
+            2,
+          ),
+        );
+        return 0;
+      }
+
+      console.log(`No exact local match for "${word}". Found exact word online.`);
+      console.log();
+      console.log(renderOnline(onlineDirectMatch, { colorEnabled }));
+      return 0;
+    }
+
+    for (const candidate of lookupCandidates) {
+      const maybe = store.lookupExact(candidate) ?? store.lookupByLemmaVariants(candidate);
+      if (maybe) {
+        entry = maybe;
+        resolvedBy = candidate;
+        showResolvedBanner = true;
+        break;
+      }
+    }
+  }
+
+  if (!entry) {
+    const suggestions = mergeSuggestions(
+      lookupCandidates.map((candidate) => store.suggest(candidate, 6)),
+      6,
+    );
 
     if (options.json) {
       console.log(JSON.stringify({ word, found: false, suggestions }, null, 2));
-    } else {
-      console.log(`No exact match for "${word}".`);
-      console.log(renderSuggestions(suggestions));
+      return 1;
     }
 
-    return 1;
+    console.log(`No exact match for "${word}".`);
+    console.log(renderSuggestions(suggestions, { colorEnabled }));
+
+    if (suggestions.length > 0 && process.stdin.isTTY && process.stdout.isTTY) {
+      const selectedIndex = await askSuggestionChoice(suggestions.length);
+      if (selectedIndex !== null) {
+        const selected = suggestions[selectedIndex];
+        if (selected) {
+          const selectedEntry =
+            store.lookupExact(selected.lemma) ?? store.lookupByLemmaVariants(selected.lemma);
+          if (selectedEntry) {
+            entry = selectedEntry;
+            resolvedBy = selected.lemma;
+            showResolvedBanner = false;
+            console.log();
+            console.log(`Selected "${selected.lemma}".`);
+          }
+        }
+      }
+    }
+
+    if (!entry) {
+      return 1;
+    }
   }
 
   if (options.json) {
-    const online = options.online ? await getOnlineEnrichment(word, options, config, store) : null;
+    const online = options.online
+      ? await getOnlineEnrichment(entry.lemma, options, config, store)
+      : null;
     console.log(
       JSON.stringify(
         {
           found: true,
+          resolvedBy,
           entry,
           online,
         },
@@ -84,26 +198,31 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
     return 0;
   }
 
+  if (resolvedBy && showResolvedBanner) {
+    console.log(`No exact match for "${word}". Showing closest local match "${entry.lemma}".`);
+    console.log();
+  }
+
   console.log(renderCard(entry, { colorEnabled }));
 
   if (options.more) {
     console.log();
-    console.log(renderMore(entry));
+    console.log(renderMore(entry, { colorEnabled }));
     console.log();
-    console.log(renderExamples(entry));
+    console.log(renderExamples(entry, { colorEnabled }));
     console.log();
-    console.log(renderSynonyms(entry));
+    console.log(renderSynonyms(entry, { colorEnabled }));
     console.log();
-    console.log(renderAntonyms(entry));
+    console.log(renderAntonyms(entry, { colorEnabled }));
     console.log();
-    console.log(renderForms(entry));
+    console.log(renderForms(entry, { colorEnabled }));
   }
 
   if (options.online) {
-    const online = await getOnlineEnrichment(word, options, config, store);
+    const online = await getOnlineEnrichment(entry.lemma, options, config, store);
     if (online) {
       console.log();
-      console.log(renderOnline(online));
+      console.log(renderOnline(online, { colorEnabled }));
     } else {
       console.log();
       console.log("Online enrichment unavailable.");
@@ -118,33 +237,35 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
       switch (choice) {
         case "m": {
           console.log();
-          console.log(renderMore(entry));
+          console.log(renderMore(entry, { colorEnabled }));
           break;
         }
         case "e": {
           console.log();
-          console.log(renderExamples(entry));
+          console.log(renderExamples(entry, { colorEnabled }));
           break;
         }
         case "s": {
           console.log();
-          console.log(renderSynonyms(entry));
+          console.log(renderSynonyms(entry, { colorEnabled }));
           break;
         }
         case "a": {
           console.log();
-          console.log(renderAntonyms(entry));
+          console.log(renderAntonyms(entry, { colorEnabled }));
           break;
         }
         case "f": {
           console.log();
-          console.log(renderForms(entry));
+          console.log(renderForms(entry, { colorEnabled }));
           break;
         }
         case "o": {
-          const online = await getOnlineEnrichment(word, options, config, store);
+          const online = await getOnlineEnrichment(entry.lemma, options, config, store);
           console.log();
-          console.log(online ? renderOnline(online) : "Online enrichment unavailable.");
+          console.log(
+            online ? renderOnline(online, { colorEnabled }) : "Online enrichment unavailable.",
+          );
           break;
         }
         default: {

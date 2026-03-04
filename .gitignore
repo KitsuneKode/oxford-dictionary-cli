@@ -1,20 +1,20 @@
 # dependencies (bun install)
 node_modules
 
-docs/
 # output
 out
 dist
 *.tgz
 
+docs/
 # code coverage
 coverage
 *.lcov
 
 # logs
 logs
-_.log
-report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
+*.log
+report.*.json
 
 # dotenv environment variable files
 .env
@@ -27,6 +27,13 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 .eslintcache
 .cache
 *.tsbuildinfo
+
+# local runtime data
+.tmp-data/
+.tmp-config/
+
+# husky generated internals
+.husky/_/
 
 # IntelliJ based IDEs
 .idea

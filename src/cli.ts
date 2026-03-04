@@ -33,7 +33,7 @@ Config keys:
 }
 
 function parseLookupArgs(args: string[], defaultTimeout: number): ParsedLookup {
-  let word = "";
+  const words: string[] = [];
   const options: LookupOptions = {
     json: false,
     more: false,
@@ -44,9 +44,6 @@ function parseLookupArgs(args: string[], defaultTimeout: number): ParsedLookup {
 
   for (let index = 0; index < args.length; index += 1) {
     const token = args[index];
-    if (!token) {
-      continue;
-    }
     if (!token) {
       continue;
     }
@@ -91,14 +88,10 @@ function parseLookupArgs(args: string[], defaultTimeout: number): ParsedLookup {
       throw new Error(`Unknown lookup flag: ${token}`);
     }
 
-    if (!word) {
-      word = token;
-      continue;
-    }
-
-    throw new Error(`Unexpected argument: ${token}`);
+    words.push(token);
   }
 
+  const word = words.join(" ").trim();
   if (!word) {
     throw new Error("Missing <word> argument");
   }

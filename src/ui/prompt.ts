@@ -22,3 +22,24 @@ export async function askDetailChoice(): Promise<PromptChoice> {
     rl.close();
   }
 }
+
+export async function askSuggestionChoice(maxOptions: number): Promise<number | null> {
+  const rl = createInterface({ input: stdin, output: stdout });
+
+  try {
+    const answer = await rl.question(`Choose 1-${maxOptions} or press Enter to skip: `);
+    const normalized = answer.trim().toLowerCase();
+    if (!normalized || normalized === "q") {
+      return null;
+    }
+
+    const selected = Number(normalized);
+    if (!Number.isInteger(selected) || selected < 1 || selected > maxOptions) {
+      return null;
+    }
+
+    return selected - 1;
+  } finally {
+    rl.close();
+  }
+}

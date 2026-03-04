@@ -50,6 +50,7 @@ bun run unlink:global
 - First use is instant with bundled local core lexicon.
 - `oxf sync` can replace local DB using a manifest URL/path.
 - Online enrichment is opt-in only (`--online` or interactive `O`).
+- If a word is missing locally, `oxf` attempts a fast online fallback (short timeout) and caches results.
 
 ## Quality workflow
 
@@ -58,10 +59,12 @@ bun run lint
 bun run lint:fix
 bun run typecheck
 bun run check
+bun run pkg:check
 ```
 
 - Biome config: `.biome.json`
 - Pre-commit hook: lint staged files via Biome
+- Commit message hook: conventional commit validation via commitlint
 - Pre-push hook: runs `bun run check`
 
 ## Additional docs

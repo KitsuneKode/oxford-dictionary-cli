@@ -5,35 +5,58 @@ interface RenderOptions {
   colorEnabled: boolean;
 }
 
+const PLAIN_RENDER_OPTIONS: RenderOptions = { colorEnabled: false };
+
 function uniqueByValue(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
-export function renderCard(entry: DictionaryEntry, options: RenderOptions): string {
-  const lines: string[] = [];
-  const title = entry.ipa ? `${entry.lemma} ${style(entry.ipa, "gray", options)}` : entry.lemma;
+function title(label: string, options: RenderOptions): string {
+  return style(label, "yellow", options);
+}
 
-  lines.push(style(title, "bold", options));
+function divider(minLength: number, options: RenderOptions): string {
+  return style("=".repeat(Math.max(40, minLength)), "gray", options);
+}
+
+function resolveOptions(options?: RenderOptions): RenderOptions {
+  return options ?? PLAIN_RENDER_OPTIONS;
+}
+
+export function renderCard(entry: DictionaryEntry, maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
+  const lines: string[] = [];
+  const titleText = entry.ipa ? `${entry.lemma} ${entry.ipa}` : entry.lemma;
+
+  lines.push(divider(titleText.length + 8, options));
+  lines.push(
+    `${title("WORD", options)} ${style(entry.lemma, "bold", options)}${entry.ipa ? ` ${style(entry.ipa, "gray", options)}` : ""}`,
+  );
 
   const topSenses = entry.senses.slice(0, 2);
-  for (const sense of topSenses) {
-    lines.push(style(sense.pos, "cyan", options));
-    lines.push(bullet(sense.definition));
+  for (const [index, sense] of topSenses.entries()) {
+    lines.push(
+      `${style(`#${index + 1}`, "green", options)} ${style(sense.pos.toUpperCase(), "cyan", options)}`,
+    );
+    lines.push(`   ${sense.definition}`);
   }
 
   lines.push(
     style(
-      `source: ${entry.source}${entry.frequencyRank ? ` | rank: ${entry.frequencyRank}` : ""}`,
+      `[source: ${entry.source}${entry.frequencyRank ? ` | rank: ${entry.frequencyRank}` : ""}]`,
       "dim",
       options,
     ),
   );
+  lines.push(divider(titleText.length + 8, options));
 
   return lines.join("\n");
 }
 
-export function renderExamples(entry: DictionaryEntry): string {
-  const lines: string[] = ["Examples"];
+export function renderExamples(entry: DictionaryEntry, maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
+  const lines: string[] = [title("EXAMPLES", options)];
+
   for (const sense of entry.senses) {
     const scoped = sense.examples.map((example) => `${sense.pos}: ${example}`);
     for (const line of scoped) {
@@ -48,37 +71,46 @@ export function renderExamples(entry: DictionaryEntry): string {
   return lines.join("\n");
 }
 
-export function renderSynonyms(entry: DictionaryEntry): string {
+export function renderSynonyms(entry: DictionaryEntry, maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
   const terms = uniqueByValue(entry.senses.flatMap((sense) => sense.synonyms));
+
   if (terms.length === 0) {
-    return ["Synonyms", bullet("No synonyms found in local dataset.")].join("\n");
+    return [title("SYNONYMS", options), bullet("No synonyms found in local dataset.")].join("\n");
   }
 
-  return ["Synonyms", bullet(terms.join(", "))].join("\n");
+  return [title("SYNONYMS", options), bullet(terms.join(", "))].join("\n");
 }
 
-export function renderAntonyms(entry: DictionaryEntry): string {
+export function renderAntonyms(entry: DictionaryEntry, maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
   const terms = uniqueByValue(entry.senses.flatMap((sense) => sense.antonyms));
+
   if (terms.length === 0) {
-    return ["Antonyms", bullet("No antonyms found in local dataset.")].join("\n");
+    return [title("ANTONYMS", options), bullet("No antonyms found in local dataset.")].join("\n");
   }
 
-  return ["Antonyms", bullet(terms.join(", "))].join("\n");
+  return [title("ANTONYMS", options), bullet(terms.join(", "))].join("\n");
 }
 
-export function renderForms(entry: DictionaryEntry): string {
+export function renderForms(entry: DictionaryEntry, maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
+
   if (entry.forms.length === 0) {
-    return ["Forms", bullet("No inflections/forms found in local dataset.")].join("\n");
+    return [title("FORMS", options), bullet("No inflections/forms found in local dataset.")].join(
+      "\n",
+    );
   }
 
-  return ["Forms", bullet(entry.forms.join(", "))].join("\n");
+  return [title("FORMS", options), bullet(entry.forms.join(", "))].join("\n");
 }
 
-export function renderMore(entry: DictionaryEntry): string {
-  const lines: string[] = ["Details"];
+export function renderMore(entry: DictionaryEntry, maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
+  const lines: string[] = [title("DETAILS", options)];
 
   for (const sense of entry.senses) {
-    lines.push(`${sense.pos}: ${sense.definition}`);
+    lines.push(`${style(sense.pos.toUpperCase(), "magenta", options)}: ${sense.definition}`);
 
     if (sense.examples.length > 0) {
       lines.push(bullet(`example: ${sense.examples[0]}`));
@@ -96,24 +128,29 @@ export function renderMore(entry: DictionaryEntry): string {
   return lines.join("\n");
 }
 
-export function renderSuggestions(suggestions: Suggestion[]): string {
+export function renderSuggestions(suggestions: Suggestion[], maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
+
   if (suggestions.length === 0) {
-    return "No close matches found.";
+    return style("No close matches found.", "dim", options);
   }
 
-  const lines = ["Did you mean:"];
+  const lines = [title("Not found. This might be what you're looking for:", options)];
   for (const [index, suggestion] of suggestions.entries()) {
-    lines.push(`${index + 1}. ${suggestion.lemma}`);
+    lines.push(
+      `${style(String(index + 1), "green", options)}. ${style(suggestion.lemma, "bold", options)}`,
+    );
   }
 
   return lines.join("\n");
 }
 
-export function renderOnline(enrichment: OnlineEnrichment): string {
-  const lines: string[] = [`Online enrichment (${enrichment.provider})`];
+export function renderOnline(enrichment: OnlineEnrichment, maybeOptions?: RenderOptions): string {
+  const options = resolveOptions(maybeOptions);
+  const lines: string[] = [title(`ONLINE ENRICHMENT (${enrichment.provider})`, options)];
 
   for (const item of enrichment.definitions.slice(0, 8)) {
-    lines.push(`${item.pos}: ${item.text}`);
+    lines.push(`${style(item.pos.toUpperCase(), "cyan", options)}: ${item.text}`);
     if (item.example) {
       lines.push(bullet(`example: ${item.example}`));
     }

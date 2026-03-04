@@ -1,5 +1,7 @@
 {
   "name": "oxf",
+  "version": "0.1.0",
+  "description": "High-performance local-first dictionary CLI built with Bun",
   "module": "src/cli.ts",
   "type": "module",
   "private": true,
@@ -15,7 +17,10 @@
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
     "check": "bun run typecheck && bun run lint && bun test",
+    "pkg:check": "publint && npm pack --dry-run",
+    "check:all": "bun run check && bun run pkg:check",
     "lint-staged": "lint-staged",
+    "commitlint": "commitlint --edit",
     "prepare": "[ -d .git ] && husky || echo 'Skipping husky install (no .git directory)'",
     "typecheck": "bunx tsc --noEmit",
     "build:core": "bun run scripts/build-core.ts",
@@ -23,9 +28,12 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.5",
+    "@commitlint/cli": "^20.4.3",
+    "@commitlint/config-conventional": "^20.4.3",
     "@types/bun": "latest",
     "husky": "^9.1.7",
-    "lint-staged": "^16.3.2"
+    "lint-staged": "^16.3.2",
+    "publint": "^0.3.18"
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx,mjs,cjs,json,md}": [
