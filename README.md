@@ -71,6 +71,30 @@ oxf config get <key>
 oxf config set <key> <value>
 ```
 
+## How to use (practical)
+
+Local run from this repo:
+
+```bash
+bun run start -- undogmatic
+```
+
+Global run after `bun run link:global`:
+
+```bash
+oxf undogmatic
+```
+
+Interactive lookup flow:
+
+```bash
+oxf dogmatic
+```
+
+- Type feature keys in prompt (`m`, `e`, `s`, `a`, `f`, `o`) for more details.
+- Type another word and press Enter to lookup immediately.
+- Press Enter on empty input, `q`, `quit`, or `exit` to close.
+
 ## Notes
 
 - First use is instant with bundled local core lexicon.
