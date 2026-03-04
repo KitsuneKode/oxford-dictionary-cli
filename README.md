@@ -95,18 +95,22 @@ bun run unlink:global
 ```bash
 bun run lint
 bun run lint:fix
+bun run lint:md
+bun run lint:md:fix
 bun run typecheck
 bun run check
 bun run pkg:check
 ```
 
 - Biome config: `.biome.json`
-- Pre-commit hook: lint staged files via Biome
+- Markdownlint config: `.markdownlint-cli2.jsonc`
+- Pre-commit hook: lint staged files via Biome + markdownlint
 - Commit message hook: conventional commit validation via commitlint
 - Pre-push hook: runs `bun run check`
 
 ## Additional docs
 
+- Contribution guide: `CONTRIBUTING.md`
 - Distribution and publishing: `docs/distribution.md`
 - Launch messaging and social templates: `docs/launch.md`
 - Oxford-style lookup architecture and data model: `docs/oxford-style.md`
