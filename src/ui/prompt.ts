@@ -43,3 +43,24 @@ export async function askSuggestionChoice(maxOptions: number): Promise<number | 
     rl.close();
   }
 }
+
+export async function askNextLookupQuery(): Promise<string | null> {
+  const rl = createInterface({ input: stdin, output: stdout });
+
+  try {
+    const answer = await rl.question("Next word (Enter/q to quit, or type another query): ");
+    const trimmed = answer.trim();
+    if (!trimmed) {
+      return null;
+    }
+
+    const normalized = trimmed.toLowerCase();
+    if (normalized === "q" || normalized === "quit" || normalized === "exit") {
+      return null;
+    }
+
+    return trimmed;
+  } finally {
+    rl.close();
+  }
+}
