@@ -1,0 +1,38 @@
+{
+  "name": "oxf",
+  "module": "src/cli.ts",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "oxf": "./bin/oxf.ts"
+  },
+  "scripts": {
+    "start": "bun run bin/oxf.ts",
+    "link:global": "bun link",
+    "unlink:global": "bun unlink",
+    "test": "bun test",
+    "lint": "biome check .",
+    "lint:fix": "biome check --write .",
+    "format": "biome format --write .",
+    "check": "bun run typecheck && bun run lint && bun test",
+    "lint-staged": "lint-staged",
+    "prepare": "[ -d .git ] && husky || echo 'Skipping husky install (no .git directory)'",
+    "typecheck": "bunx tsc --noEmit",
+    "build:core": "bun run scripts/build-core.ts",
+    "build:full": "bun run scripts/build-full.ts"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.5",
+    "@types/bun": "latest",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.3.2"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs,json,md}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
