@@ -75,20 +75,20 @@ bun run unlink:global
 ## Notes
 
 - First use is instant with bundled local core lexicon.
-- `oxf sync` can replace local DB using a manifest URL/path.
+- `oxf sync` can replace local DB using a manifest URL/path (for large offline coverage).
 - Online enrichment is opt-in only (`--online` or interactive `O`).
 - If a word is missing locally, `oxf` attempts a fast online fallback (short timeout) and caches results.
-- In interactive terminal mode, you can keep searching continuously and exit with `Enter`, `q`, or `Ctrl+C`.
+- In interactive terminal mode, you can keep searching continuously and exit with `q`/`quit` or `Ctrl+C`.
 
 ## Data coverage and fallback behavior
 
-- Current bundled local dataset is intentionally small (`core-1.0.0`, 15 entries).
-- So uncommon words often miss locally and may resolve via fast online fallback.
+- Current bundled local dataset is intentionally small (`core-1.0.0`, 15 entries) for instant first-run speed.
+- `build:full` now builds a much larger offline dataset from WordNet 3.1 into `assets/full.db`.
+- After `build:full` + `sync`, local coverage is significantly broader.
 - If no local exact match:
   - `oxf` first attempts a short-timeout online exact lookup.
   - if online exact is unavailable, it tries local smart candidates/suggestions.
-- `build:full` currently generates a demo full DB from local core data; it is not yet a large production dictionary dump.
-- To get true offline-first coverage, you need a larger synced DB generated from a real dictionary source.
+- For best offline-first behavior, run `build:full` and sync that DB before relying on fallback.
 
 ## Quality workflow
 

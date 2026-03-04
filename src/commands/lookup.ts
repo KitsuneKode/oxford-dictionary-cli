@@ -21,6 +21,12 @@ interface LookupCommandInput {
   store: DictionaryStore;
 }
 
+export interface LookupOutcome {
+  exitCode: number;
+  nextQuery?: string;
+  shouldExitSession?: boolean;
+}
+
 const ONLINE_FALLBACK_TIMEOUT_MS = 900;
 
 function mergeSuggestions(suggestionsBySeed: Suggestion[][], limit: number): Suggestion[] {
@@ -89,7 +95,7 @@ async function getOnlineEnrichment(
   }
 }
 
-export async function runLookupCommand(input: LookupCommandInput): Promise<number> {
+export async function runLookupCommand(input: LookupCommandInput): Promise<LookupOutcome> {
   const { word, options, config, store } = input;
   const colorEnabled = config.color && !options.noColor && Boolean(process.stdout.isTTY);
   const lookupCandidates = buildLookupCandidates(word);
@@ -122,13 +128,13 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
             2,
           ),
         );
-        return 0;
+        return { exitCode: 0 };
       }
 
       console.log(`No exact local match for "${word}". Found exact word online.`);
       console.log();
       console.log(renderOnline(onlineDirectMatch, { colorEnabled }));
-      return 0;
+      return { exitCode: 0 };
     }
 
     for (const candidate of lookupCandidates) {
@@ -150,7 +156,7 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
 
     if (options.json) {
       console.log(JSON.stringify({ word, found: false, suggestions }, null, 2));
-      return 1;
+      return { exitCode: 1 };
     }
 
     console.log(`No exact match for "${word}".`);
@@ -175,7 +181,7 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
     }
 
     if (!entry) {
-      return 1;
+      return { exitCode: 1 };
     }
   }
 
@@ -195,7 +201,7 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
         2,
       ),
     );
-    return 0;
+    return { exitCode: 0 };
   }
 
   if (resolvedBy && showResolvedBanner) {
@@ -231,10 +237,15 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
 
   if (!options.more && !options.online && process.stdin.isTTY && process.stdout.isTTY) {
     let running = true;
+    let nextQuery: string | undefined;
     while (running) {
-      const choice = await askDetailChoice();
+      const rawInput = await askDetailChoice();
+      const normalized = rawInput.trim().toLowerCase();
+      if (!normalized) {
+        return { exitCode: 0, shouldExitSession: true };
+      }
 
-      switch (choice) {
+      switch (normalized) {
         case "m": {
           console.log();
           console.log(renderMore(entry, { colorEnabled }));
@@ -268,13 +279,56 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<numbe
           );
           break;
         }
+        case "q":
+        case "quit":
+        case "exit": {
+          return { exitCode: 0, shouldExitSession: true };
+        }
         default: {
+          const shortcut = normalized.slice(0, 1);
+          if (shortcut === "m") {
+            console.log();
+            console.log(renderMore(entry, { colorEnabled }));
+            break;
+          }
+          if (shortcut === "e") {
+            console.log();
+            console.log(renderExamples(entry, { colorEnabled }));
+            break;
+          }
+          if (shortcut === "s") {
+            console.log();
+            console.log(renderSynonyms(entry, { colorEnabled }));
+            break;
+          }
+          if (shortcut === "a") {
+            console.log();
+            console.log(renderAntonyms(entry, { colorEnabled }));
+            break;
+          }
+          if (shortcut === "f") {
+            console.log();
+            console.log(renderForms(entry, { colorEnabled }));
+            break;
+          }
+          if (shortcut === "o") {
+            const online = await getOnlineEnrichment(entry.lemma, options, config, store);
+            console.log();
+            console.log(
+              online ? renderOnline(online, { colorEnabled }) : "Online enrichment unavailable.",
+            );
+            break;
+          }
+
+          nextQuery = rawInput;
           running = false;
           break;
         }
       }
     }
+
+    return { exitCode: 0, nextQuery };
   }
 
-  return 0;
+  return { exitCode: 0 };
 }

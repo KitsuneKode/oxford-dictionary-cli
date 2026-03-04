@@ -44,6 +44,31 @@ function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
 
+function decodeHtmlEntities(value: string): string {
+  return value
+    .replaceAll("&nbsp;", " ")
+    .replaceAll("&amp;", "&")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&#39;", "'")
+    .replaceAll("&lt;", "<")
+    .replaceAll("&gt;", ">");
+}
+
+function sanitizeText(raw: string): string {
+  const decoded = decodeHtmlEntities(raw);
+
+  return decoded
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\[\[([^\]|]+)\|([^\]]+)\]\]/g, "$2")
+    .replace(/\[\[([^\]]+)\]\]/g, "$1")
+    .replace(/\{\{[^}]+\}\}/g, " ")
+    .replace(/\s+/g, " ")
+    .replace(/\s+([,.;:!?])/g, "$1")
+    .replace(/\(\s+/g, "(")
+    .replace(/\s+\)/g, ")")
+    .trim();
+}
+
 async function fetchFromDictionaryApi(
   word: string,
   timeoutMs: number,
@@ -78,12 +103,17 @@ async function fetchFromDictionaryApi(
         continue;
       }
 
+      const text = sanitizeText(item.definition);
+      if (!text) {
+        continue;
+      }
+
       definitions.push({
         pos: meaning.partOfSpeech ?? "unknown",
-        text: item.definition,
-        example: item.example,
-        synonyms: uniqueStrings([...(item.synonyms ?? []), ...baseSynonyms]),
-        antonyms: uniqueStrings([...(item.antonyms ?? []), ...baseAntonyms]),
+        text,
+        example: item.example ? sanitizeText(item.example) : undefined,
+        synonyms: uniqueStrings([...(item.synonyms ?? []), ...baseSynonyms]).map(sanitizeText),
+        antonyms: uniqueStrings([...(item.antonyms ?? []), ...baseAntonyms]).map(sanitizeText),
       });
     }
   }
@@ -137,12 +167,17 @@ async function fetchFromWiktionary(
         continue;
       }
 
+      const text = sanitizeText(item.definition);
+      if (!text) {
+        continue;
+      }
+
       definitions.push({
         pos: entry.partOfSpeech ?? "unknown",
-        text: item.definition,
-        example: item.examples?.[0],
-        synonyms: entrySynonyms,
-        antonyms: entryAntonyms,
+        text,
+        example: item.examples?.[0] ? sanitizeText(item.examples[0]) : undefined,
+        synonyms: entrySynonyms.map(sanitizeText).filter(Boolean),
+        antonyms: entryAntonyms.map(sanitizeText).filter(Boolean),
       });
     }
   }
@@ -185,7 +220,7 @@ async function fetchFromDatamuse(
 
   for (const def of exact.defs) {
     const [posRaw, textRaw] = def.split("\t");
-    const text = textRaw?.trim();
+    const text = sanitizeText(textRaw?.trim() ?? "");
     if (!text) {
       continue;
     }
@@ -215,13 +250,22 @@ export async function fetchOnlineEnrichment(
 ): Promise<OnlineEnrichment | null> {
   const providers: Array<(word: string, timeoutMs: number) => Promise<OnlineEnrichment | null>> = [
     fetchFromDictionaryApi,
-    fetchFromWiktionary,
     fetchFromDatamuse,
+    fetchFromWiktionary,
   ];
+  const deadlineAt = Date.now() + timeoutMs;
 
-  for (const provider of providers) {
+  for (const [index, provider] of providers.entries()) {
+    const remaining = deadlineAt - Date.now();
+    if (remaining <= 120) {
+      break;
+    }
+
+    const providersLeft = providers.length - index;
+    const providerBudget = Math.max(250, Math.floor(remaining / Math.max(1, providersLeft)));
+
     try {
-      const result = await provider(word, timeoutMs);
+      const result = await provider(word, providerBudget);
       if (result) {
         return result;
       }

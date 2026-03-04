@@ -1,18 +1,18 @@
 {
   "channels": {
     "stable": {
-      "version": "core-derived-1.0.0",
+      "version": "wordnet-3.1",
       "url": "full.db",
-      "sha256": "d8a8884eeffa3d017af4539fde622139239434e0fee1576bc931143e7e24a606",
-      "sizeBytes": 90112,
-      "updatedAt": "2026-03-04T14:16:47.747Z"
+      "sha256": "3482df1d570903c9015524b7ffbfacf95a68b4de3b7eb56d8dc6b5a73f6cde75",
+      "sizeBytes": 47648768,
+      "updatedAt": "2026-03-04T14:34:32.101Z"
     },
     "latest": {
-      "version": "core-derived-1.0.0",
+      "version": "wordnet-3.1",
       "url": "full.db",
-      "sha256": "d8a8884eeffa3d017af4539fde622139239434e0fee1576bc931143e7e24a606",
-      "sizeBytes": 90112,
-      "updatedAt": "2026-03-04T14:16:47.747Z"
+      "sha256": "3482df1d570903c9015524b7ffbfacf95a68b4de3b7eb56d8dc6b5a73f6cde75",
+      "sizeBytes": 47648768,
+      "updatedAt": "2026-03-04T14:34:32.101Z"
     }
   }
 }

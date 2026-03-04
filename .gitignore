@@ -30,7 +30,10 @@ report.*.json
 
 # local runtime data
 .tmp-data/
+.tmp-data*/
 .tmp-config/
+.tmp-config*/
+.worktrees/
 
 # husky generated internals
 .husky/_/
