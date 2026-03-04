@@ -15,8 +15,10 @@
     "test": "bun test",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
+    "lint:md": "markdownlint-cli2 \"**/*.md\" \"#node_modules\" \"#.worktrees\"",
+    "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#.worktrees\"",
     "format": "biome format --write .",
-    "check": "bun run typecheck && bun run lint && bun test",
+    "check": "bun run typecheck && bun run lint && bun run lint:md && bun test",
     "pkg:check": "publint && npm pack --dry-run",
     "check:all": "bun run check && bun run pkg:check",
     "lint-staged": "lint-staged",
@@ -33,12 +35,16 @@
     "@types/bun": "latest",
     "husky": "^9.1.7",
     "lint-staged": "^16.3.2",
+    "markdownlint-cli2": "^0.21.0",
     "publint": "^0.3.18",
     "wordnet-db": "^3.1.14"
   },
   "lint-staged": {
-    "*.{ts,tsx,js,jsx,mjs,cjs,json,md}": [
+    "*.{ts,tsx,js,jsx,mjs,cjs,json}": [
       "biome check --write --no-errors-on-unmatched"
+    ],
+    "*.md": [
+      "markdownlint-cli2 --fix"
     ]
   },
   "peerDependencies": {
