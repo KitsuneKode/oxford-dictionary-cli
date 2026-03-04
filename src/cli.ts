@@ -144,7 +144,7 @@ async function runLookupSession(
 
   try {
     while (true) {
-      lastExitCode = await runLookupCommand({
+      const outcome = await runLookupCommand({
         word: currentWord,
         options: {
           ...options,
@@ -153,10 +153,21 @@ async function runLookupSession(
         config,
         store,
       });
+      lastExitCode = outcome.exitCode;
 
       const shouldLoop = process.stdin.isTTY && process.stdout.isTTY && !options.json;
       if (!shouldLoop) {
         return lastExitCode;
+      }
+
+      if (outcome.shouldExitSession) {
+        return 0;
+      }
+
+      if (outcome.nextQuery) {
+        currentWord = outcome.nextQuery;
+        console.log();
+        continue;
       }
 
       console.log();
