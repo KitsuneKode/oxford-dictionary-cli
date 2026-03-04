@@ -12,34 +12,46 @@ High-performance local-first dictionary CLI built with Bun + TypeScript.
 bun install
 ```
 
-## Quick start (step-by-step)
+## Run locally (no global install)
 
-1. Run a lookup:
+Use `bun run start -- ...` directly from this repo:
 
 ```bash
 bun run start -- dogmatic
-```
-
-2. Check local dataset status:
-
-```bash
+bun run start -- lookup dogmatic --more
 bun run start -- status
 ```
 
-3. Build local dataset artifacts:
+## Install system-wide with Bun link
+
+```bash
+bun run link:global
+oxf dogmatic
+oxf status
+```
+
+To remove the global link:
+
+```bash
+bun run unlink:global
+```
+
+## First-time offline setup (recommended)
+
+1. Build local dataset artifacts:
 
 ```bash
 bun run build:core
 bun run build:full
 ```
 
-4. Sync from local manifest artifact:
+2. Sync from local manifest artifact:
 
 ```bash
 bun run start -- sync --channel stable --manifest ./assets/manifest.json
 ```
 
-5. Re-check status:
+3. Re-check status:
 
 ```bash
 bun run start -- status
@@ -57,19 +69,6 @@ oxf status
 oxf doctor
 oxf config get <key>
 oxf config set <key> <value>
-```
-
-## Global install (local development)
-
-```bash
-bun run link:global
-oxf dogmatic
-```
-
-To remove it:
-
-```bash
-bun run unlink:global
 ```
 
 ## Notes
