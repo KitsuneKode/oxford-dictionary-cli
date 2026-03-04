@@ -5,7 +5,8 @@ import { runStatusCommand } from "./commands/status";
 import { runSyncCommand } from "./commands/sync";
 import { loadConfig } from "./config/config";
 import { openDictionaryStore } from "./db/store";
-import type { LookupOptions } from "./types";
+import type { LookupOptions, OxfConfig } from "./types";
+import { askNextLookupQuery } from "./ui/prompt";
 
 interface ParsedLookup {
   word: string;
@@ -132,6 +133,46 @@ function parseSyncArgs(args: string[]): { channel: string; manifest?: string } {
   return { channel, manifest };
 }
 
+async function runLookupSession(
+  initialWord: string,
+  options: LookupOptions,
+  config: OxfConfig,
+): Promise<number> {
+  const store = await openDictionaryStore(config);
+  let lastExitCode = 0;
+  let currentWord = initialWord;
+
+  try {
+    while (true) {
+      lastExitCode = await runLookupCommand({
+        word: currentWord,
+        options: {
+          ...options,
+          timeoutMs: options.timeoutMs || config.timeoutMs,
+        },
+        config,
+        store,
+      });
+
+      const shouldLoop = process.stdin.isTTY && process.stdout.isTTY && !options.json;
+      if (!shouldLoop) {
+        return lastExitCode;
+      }
+
+      console.log();
+      const next = await askNextLookupQuery();
+      if (!next) {
+        return 0;
+      }
+
+      currentWord = next;
+      console.log();
+    }
+  } finally {
+    store.close();
+  }
+}
+
 export async function runCli(argv: string[]): Promise<number> {
   const config = await loadConfig();
 
@@ -145,12 +186,7 @@ export async function runCli(argv: string[]): Promise<number> {
 
   if (first === "lookup") {
     const parsed = parseLookupArgs(rest, config.timeoutMs);
-    const store = await openDictionaryStore(config);
-    try {
-      return await runLookupCommand({ ...parsed, config, store });
-    } finally {
-      store.close();
-    }
+    return await runLookupSession(parsed.word, parsed.options, config);
   }
 
   if (first === "sync") {
@@ -175,10 +211,5 @@ export async function runCli(argv: string[]): Promise<number> {
   }
 
   const parsed = parseLookupArgs(argv, config.timeoutMs);
-  const store = await openDictionaryStore(config);
-  try {
-    return await runLookupCommand({ ...parsed, config, store });
-  } finally {
-    store.close();
-  }
+  return await runLookupSession(parsed.word, parsed.options, config);
 }
