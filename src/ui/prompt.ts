@@ -1,12 +1,14 @@
 import { stdin, stdout } from "node:process";
 import { createInterface } from "node:readline/promises";
+import { style } from "./styles";
 
-export async function askDetailChoice(): Promise<string> {
+export async function askDetailChoice(currentWord: string, colorEnabled: boolean): Promise<string> {
   const rl = createInterface({ input: stdin, output: stdout });
 
   try {
+    const highlightedWord = style(currentWord, "bold", { colorEnabled });
     const answer = await rl.question(
-      "[M]ore [E]xamples [S]ynonyms [A]ntonyms [F]orms [O]nline [C]opy [Q]uit | type next word then Enter: ",
+      `[word: ${highlightedWord}] [M]ore [E]xamples [S]ynonyms [A]ntonyms [F]orms [O]nline [C]opy [Q]uit | type next word then Enter: `,
     );
     return answer.trim();
   } finally {

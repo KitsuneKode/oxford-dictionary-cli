@@ -264,38 +264,44 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
     let running = true;
     let nextQuery: string | undefined;
     while (running) {
-      const rawInput = await askDetailChoice();
+      const rawInput = await askDetailChoice(entry.lemma, colorEnabled);
       const normalized = rawInput.trim().toLowerCase();
       if (!normalized) {
         return { exitCode: 0, shouldExitSession: true };
       }
 
       switch (normalized) {
+        case "more":
         case "m": {
           console.log();
           console.log(renderMore(entry, { colorEnabled }));
           break;
         }
+        case "examples":
         case "e": {
           console.log();
           console.log(renderExamples(entry, { colorEnabled }));
           break;
         }
+        case "synonyms":
         case "s": {
           console.log();
           console.log(renderSynonyms(entry, { colorEnabled }));
           break;
         }
+        case "antonyms":
         case "a": {
           console.log();
           console.log(renderAntonyms(entry, { colorEnabled }));
           break;
         }
+        case "forms":
         case "f": {
           console.log();
           console.log(renderForms(entry, { colorEnabled }));
           break;
         }
+        case "online":
         case "o": {
           latestOnline = await getOnlineEnrichment(entry.lemma, options, config, store);
           console.log();
@@ -323,53 +329,6 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
           return { exitCode: 0, shouldExitSession: true };
         }
         default: {
-          const shortcut = normalized.slice(0, 1);
-          if (shortcut === "m") {
-            console.log();
-            console.log(renderMore(entry, { colorEnabled }));
-            break;
-          }
-          if (shortcut === "e") {
-            console.log();
-            console.log(renderExamples(entry, { colorEnabled }));
-            break;
-          }
-          if (shortcut === "s") {
-            console.log();
-            console.log(renderSynonyms(entry, { colorEnabled }));
-            break;
-          }
-          if (shortcut === "a") {
-            console.log();
-            console.log(renderAntonyms(entry, { colorEnabled }));
-            break;
-          }
-          if (shortcut === "f") {
-            console.log();
-            console.log(renderForms(entry, { colorEnabled }));
-            break;
-          }
-          if (shortcut === "o") {
-            latestOnline = await getOnlineEnrichment(entry.lemma, options, config, store);
-            console.log();
-            console.log(
-              latestOnline
-                ? renderOnline(latestOnline, { colorEnabled })
-                : "Online enrichment unavailable.",
-            );
-            break;
-          }
-          if (shortcut === "c") {
-            const result = copyToClipboard(buildClipboardSnapshot(entry, latestOnline));
-            console.log();
-            if (result.ok) {
-              console.log(`Copied to clipboard (${result.method}).`);
-            } else {
-              console.log(`Copy failed: ${result.error}`);
-            }
-            break;
-          }
-
           nextQuery = rawInput;
           running = false;
           break;
