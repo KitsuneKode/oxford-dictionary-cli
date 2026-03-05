@@ -1,0 +1,87 @@
+#compdef oxf
+
+_oxf() {
+  local -a commands config_keys
+  commands=(
+    "lookup:Lookup a word"
+    "sync:Sync dictionary dataset"
+    "status:Show local dataset status"
+    "doctor:Run health checks"
+    "config:Get or set configuration values"
+  )
+  config_keys=(
+    "syncManifestUrl:Manifest URL (path or URL)"
+    "enrichmentCacheTtlHours:Online cache TTL in hours"
+    "timeoutMs:Request timeout in milliseconds"
+    "color:Enable/disable colored output"
+  )
+
+  _arguments -C \
+    "(-h --help)"{-h,--help}"[Show help]" \
+    "1:command or word:->first" \
+    "*::arg:->rest"
+
+  case "$state" in
+    first)
+      _describe "commands" commands
+      ;;
+    rest)
+      case "${words[2]}" in
+        lookup)
+          _arguments \
+            "--json[Print JSON output]" \
+            "--more[Show detail actions interactively]" \
+            "--online[Enable online enrichment]" \
+            "--no-color[Disable color output]" \
+            "--timeout[Set timeout in milliseconds]:milliseconds:" \
+            "*:word:"
+          ;;
+        sync)
+          _arguments \
+            "--channel[Select sync channel]:channel:(stable latest)" \
+            "--manifest[Manifest file path or URL]:manifest:_files"
+          ;;
+        status|doctor)
+          ;;
+        config)
+          if (( CURRENT == 3 )); then
+            _values "action" get set
+            return
+          fi
+
+          case "${words[3]}" in
+            get)
+              if (( CURRENT == 4 )); then
+                _describe "config key" config_keys
+              fi
+              ;;
+            set)
+              if (( CURRENT == 4 )); then
+                _describe "config key" config_keys
+                return
+              fi
+
+              if (( CURRENT == 5 )); then
+                case "${words[4]}" in
+                  color)
+                    _values "boolean" true false
+                    ;;
+                  syncManifestUrl)
+                    _files
+                    ;;
+                  *)
+                    _message "value"
+                    ;;
+                esac
+              fi
+              ;;
+          esac
+          ;;
+        *)
+          ;;
+      esac
+      ;;
+  esac
+}
+
+_oxf "$@"
