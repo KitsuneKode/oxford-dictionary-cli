@@ -95,6 +95,8 @@ rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"*
 exec zsh
 ```
 
+The Zsh completion already quotes the literal `--help`/`-h` branch so that any `--help` alias (e.g., `--help='--help 2>&1 | bat …'`) can’t inject redirections into the script. Keep the shipped file synced if you copy it elsewhere; otherwise mirror the quoted `status|doctor|'--help'|'-h'` branch in your own completion to avoid parse errors.
+
 Enable permanently (recommended):
 
 ```bash
