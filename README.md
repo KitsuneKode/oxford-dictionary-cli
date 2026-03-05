@@ -76,7 +76,7 @@ oxf config set <key> <value>
 Completion scripts are available in `completions/`:
 
 - Bash: `completions/oxf.bash`
-- Zsh: `completions/_oxf`
+- Zsh: `completions/oxf.zsh`
 
 Enable for current shell session:
 
@@ -85,10 +85,7 @@ Enable for current shell session:
 source ./completions/oxf.bash
 
 # zsh
-fpath=(./completions $fpath)
-autoload -Uz compinit && compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
-# fallback (if needed):
-# source ./completions/_oxf
+source ./completions/oxf.zsh
 ```
 
 Enable permanently (recommended):
@@ -102,7 +99,7 @@ cp ./completions/oxf.bash ~/.local/share/bash-completion/completions/oxf
 ```bash
 # zsh
 mkdir -p ~/.zsh/completions
-cp ./completions/_oxf ~/.zsh/completions/_oxf
+cp ./completions/oxf.zsh ~/.zsh/completions/_oxf
 ```
 
 Then add this to `~/.zshrc` if not already present:
