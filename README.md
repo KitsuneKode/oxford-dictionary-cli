@@ -71,6 +71,46 @@ oxf config get <key>
 oxf config set <key> <value>
 ```
 
+## Shell autocomplete
+
+Completion scripts are available in `completions/`:
+
+- Bash: `completions/oxf.bash`
+- Zsh: `completions/_oxf`
+
+Enable for current shell session:
+
+```bash
+# bash
+source ./completions/oxf.bash
+
+# zsh
+fpath=(./completions $fpath)
+autoload -Uz compinit && compinit
+```
+
+Enable permanently (recommended):
+
+```bash
+# bash
+mkdir -p ~/.local/share/bash-completion/completions
+cp ./completions/oxf.bash ~/.local/share/bash-completion/completions/oxf
+```
+
+```bash
+# zsh
+mkdir -p ~/.zsh/completions
+cp ./completions/_oxf ~/.zsh/completions/_oxf
+```
+
+Then add this to `~/.zshrc` if not already present:
+
+```bash
+fpath=(~/.zsh/completions $fpath)
+autoload -Uz compinit
+compinit
+```
+
 ## How to use (practical)
 
 Local run from this repo:
@@ -92,6 +132,7 @@ oxf dogmatic
 ```
 
 - Type feature keys in prompt (`m`, `e`, `s`, `a`, `f`, `o`) for more details.
+- Press `c` to copy the current lookup snapshot to system clipboard.
 - Type another word and press Enter to lookup immediately.
 - Press Enter on empty input, `q`, `quit`, or `exit` to close.
 

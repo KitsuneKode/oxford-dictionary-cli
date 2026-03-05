@@ -1,7 +1,14 @@
 import type { DictionaryStore } from "../db/store";
 import { buildLookupCandidates } from "../domain/query-candidates";
 import { fetchOnlineEnrichment } from "../enrich/provider";
-import type { LookupOptions, OnlineEnrichment, OxfConfig, Suggestion } from "../types";
+import type {
+  DictionaryEntry,
+  LookupOptions,
+  OnlineEnrichment,
+  OxfConfig,
+  Suggestion,
+} from "../types";
+import { copyToClipboard } from "../ui/clipboard";
 import { askDetailChoice, askSuggestionChoice } from "../ui/prompt";
 import {
   renderAntonyms,
@@ -68,6 +75,23 @@ function isCacheFresh(fetchedAt: number, ttlHours: number): boolean {
   return Date.now() - fetchedAt <= ttlHours * 60 * 60 * 1000;
 }
 
+function buildClipboardSnapshot(entry: DictionaryEntry, online: OnlineEnrichment | null): string {
+  const sections = [
+    renderCard(entry, { colorEnabled: false }),
+    renderMore(entry, { colorEnabled: false }),
+    renderExamples(entry, { colorEnabled: false }),
+    renderSynonyms(entry, { colorEnabled: false }),
+    renderAntonyms(entry, { colorEnabled: false }),
+    renderForms(entry, { colorEnabled: false }),
+  ];
+
+  if (online) {
+    sections.push(renderOnline(online, { colorEnabled: false }));
+  }
+
+  return sections.join("\n\n").trim();
+}
+
 async function getOnlineEnrichment(
   word: string,
   options: LookupOptions,
@@ -104,6 +128,7 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
   let showResolvedBanner = false;
   let entry = store.lookupExact(word) ?? store.lookupByLemmaVariants(word);
   let onlineDirectMatch: OnlineEnrichment | null = null;
+  let latestOnline: OnlineEnrichment | null = null;
 
   if (!entry) {
     onlineDirectMatch = await getOnlineEnrichment(
@@ -225,10 +250,10 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
   }
 
   if (options.online) {
-    const online = await getOnlineEnrichment(entry.lemma, options, config, store);
-    if (online) {
+    latestOnline = await getOnlineEnrichment(entry.lemma, options, config, store);
+    if (latestOnline) {
       console.log();
-      console.log(renderOnline(online, { colorEnabled }));
+      console.log(renderOnline(latestOnline, { colorEnabled }));
     } else {
       console.log();
       console.log("Online enrichment unavailable.");
@@ -272,11 +297,24 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
           break;
         }
         case "o": {
-          const online = await getOnlineEnrichment(entry.lemma, options, config, store);
+          latestOnline = await getOnlineEnrichment(entry.lemma, options, config, store);
           console.log();
           console.log(
-            online ? renderOnline(online, { colorEnabled }) : "Online enrichment unavailable.",
+            latestOnline
+              ? renderOnline(latestOnline, { colorEnabled })
+              : "Online enrichment unavailable.",
           );
+          break;
+        }
+        case "c":
+        case "copy": {
+          const result = copyToClipboard(buildClipboardSnapshot(entry, latestOnline));
+          console.log();
+          if (result.ok) {
+            console.log(`Copied to clipboard (${result.method}).`);
+          } else {
+            console.log(`Copy failed: ${result.error}`);
+          }
           break;
         }
         case "q":
@@ -312,11 +350,23 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
             break;
           }
           if (shortcut === "o") {
-            const online = await getOnlineEnrichment(entry.lemma, options, config, store);
+            latestOnline = await getOnlineEnrichment(entry.lemma, options, config, store);
             console.log();
             console.log(
-              online ? renderOnline(online, { colorEnabled }) : "Online enrichment unavailable.",
+              latestOnline
+                ? renderOnline(latestOnline, { colorEnabled })
+                : "Online enrichment unavailable.",
             );
+            break;
+          }
+          if (shortcut === "c") {
+            const result = copyToClipboard(buildClipboardSnapshot(entry, latestOnline));
+            console.log();
+            if (result.ok) {
+              console.log(`Copied to clipboard (${result.method}).`);
+            } else {
+              console.log(`Copy failed: ${result.error}`);
+            }
             break;
           }
 
