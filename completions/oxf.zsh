@@ -97,6 +97,9 @@ _oxf() {
   esac
 }
 
-if (( $+functions[compdef] )); then
-  compdef _oxf oxf
+if ! (( $+functions[compdef] )); then
+  autoload -Uz compinit
+  compinit -i -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
 fi
+
+compdef _oxf oxf
