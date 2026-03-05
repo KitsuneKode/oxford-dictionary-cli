@@ -73,7 +73,7 @@ _oxf() {
               ;;
           esac
           ;;
-        status|doctor|--help|-h)
+        status|doctor|'--help'|'-h')
           ret=0
           ;;
         *)
