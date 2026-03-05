@@ -1,13 +1,8 @@
 import type { DictionaryStore } from "../db/store";
+import { buildClipboardMeaning } from "../domain/clipboard-meaning";
 import { buildLookupCandidates } from "../domain/query-candidates";
 import { fetchOnlineEnrichment } from "../enrich/provider";
-import type {
-  DictionaryEntry,
-  LookupOptions,
-  OnlineEnrichment,
-  OxfConfig,
-  Suggestion,
-} from "../types";
+import type { LookupOptions, OnlineEnrichment, OxfConfig, Suggestion } from "../types";
 import { copyToClipboard } from "../ui/clipboard";
 import { askDetailChoice, askSuggestionChoice } from "../ui/prompt";
 import {
@@ -95,23 +90,6 @@ export function buildOnlineFallbackCandidates(
   }
 
   return ordered.slice(0, ONLINE_CANDIDATE_FALLBACK_MAX);
-}
-
-function buildClipboardSnapshot(entry: DictionaryEntry, online: OnlineEnrichment | null): string {
-  const sections = [
-    renderCard(entry, { colorEnabled: false }),
-    renderMore(entry, { colorEnabled: false }),
-    renderExamples(entry, { colorEnabled: false }),
-    renderSynonyms(entry, { colorEnabled: false }),
-    renderAntonyms(entry, { colorEnabled: false }),
-    renderForms(entry, { colorEnabled: false }),
-  ];
-
-  if (online) {
-    sections.push(renderOnline(online, { colorEnabled: false }));
-  }
-
-  return sections.join("\n\n").trim();
 }
 
 async function getOnlineEnrichment(
@@ -390,7 +368,7 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
         }
         case "c":
         case "copy": {
-          const result = copyToClipboard(buildClipboardSnapshot(entry, latestOnline));
+          const result = copyToClipboard(buildClipboardMeaning(entry, latestOnline));
           console.log();
           if (result.ok) {
             console.log(`Copied to clipboard (${result.method}).`);
