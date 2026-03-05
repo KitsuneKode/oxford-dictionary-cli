@@ -35,6 +35,8 @@ export interface LookupOutcome {
 }
 
 const ONLINE_FALLBACK_TIMEOUT_MS = 900;
+const ONLINE_CANDIDATE_FALLBACK_TIMEOUT_MS = 700;
+const ONLINE_CANDIDATE_FALLBACK_MAX = 4;
 
 function mergeSuggestions(suggestionsBySeed: Suggestion[][], limit: number): Suggestion[] {
   const merged = new Map<string, Suggestion>();
@@ -73,6 +75,26 @@ function mergeSuggestions(suggestionsBySeed: Suggestion[][], limit: number): Sug
 
 function isCacheFresh(fetchedAt: number, ttlHours: number): boolean {
   return Date.now() - fetchedAt <= ttlHours * 60 * 60 * 1000;
+}
+
+export function buildOnlineFallbackCandidates(
+  word: string,
+  lookupCandidates: string[],
+  suggestions: Suggestion[],
+): string[] {
+  const seen = new Set<string>();
+  const ordered: string[] = [];
+
+  for (const candidate of [word, ...lookupCandidates, ...suggestions.map((item) => item.lemma)]) {
+    const normalized = candidate.trim().toLowerCase();
+    if (!normalized || seen.has(normalized)) {
+      continue;
+    }
+    seen.add(normalized);
+    ordered.push(candidate);
+  }
+
+  return ordered.slice(0, ONLINE_CANDIDATE_FALLBACK_MAX);
 }
 
 function buildClipboardSnapshot(entry: DictionaryEntry, online: OnlineEnrichment | null): string {
@@ -206,6 +228,60 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
     }
 
     if (!entry) {
+      const fallbackCandidates = buildOnlineFallbackCandidates(word, lookupCandidates, suggestions);
+      let onlineFallbackCandidate: string | null = null;
+      for (const candidate of fallbackCandidates) {
+        if (candidate.trim().toLowerCase() === word.trim().toLowerCase()) {
+          continue;
+        }
+
+        const onlineFallback = await getOnlineEnrichment(
+          candidate,
+          options,
+          config,
+          store,
+          Math.min(options.timeoutMs, ONLINE_CANDIDATE_FALLBACK_TIMEOUT_MS),
+        );
+
+        if (!onlineFallback) {
+          continue;
+        }
+
+        onlineDirectMatch = onlineFallback;
+        onlineFallbackCandidate = candidate;
+        break;
+      }
+
+      if (onlineDirectMatch) {
+        if (options.json) {
+          console.log(
+            JSON.stringify(
+              {
+                word,
+                found: true,
+                source: "online-fallback",
+                resolvedBy: onlineFallbackCandidate ?? word,
+                online: onlineDirectMatch,
+              },
+              null,
+              2,
+            ),
+          );
+          return { exitCode: 0 };
+        }
+
+        if (onlineFallbackCandidate) {
+          console.log(
+            `No local exact match for "${word}". Found relevant word online: "${onlineFallbackCandidate}".`,
+          );
+        } else {
+          console.log(`No local exact match for "${word}". Found exact word online.`);
+        }
+        console.log();
+        console.log(renderOnline(onlineDirectMatch, { colorEnabled }));
+        return { exitCode: 0 };
+      }
+
       return { exitCode: 1 };
     }
   }

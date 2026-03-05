@@ -141,7 +141,7 @@ oxf dogmatic
 - First use is instant with bundled local core lexicon.
 - `oxf sync` can replace local DB using a manifest URL/path (for large offline coverage).
 - Online enrichment is opt-in only (`--online` or interactive `O`).
-- If a word is missing locally, `oxf` attempts a fast online fallback (short timeout) and caches results.
+- If a word is missing locally, `oxf` attempts a fast smart online fallback (exact first, then relevant candidates) and caches results.
 - In interactive terminal mode, you can keep searching continuously and exit with `q`/`quit` or `Ctrl+C`.
 
 ## Data coverage and fallback behavior
