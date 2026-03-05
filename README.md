@@ -86,7 +86,9 @@ source ./completions/oxf.bash
 
 # zsh
 fpath=(./completions $fpath)
-autoload -Uz compinit && compinit
+autoload -Uz compinit && compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
+# fallback (if needed):
+# source ./completions/_oxf
 ```
 
 Enable permanently (recommended):
@@ -108,7 +110,7 @@ Then add this to `~/.zshrc` if not already present:
 ```bash
 fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit
-compinit
+compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
 ```
 
 ## How to use (practical)
