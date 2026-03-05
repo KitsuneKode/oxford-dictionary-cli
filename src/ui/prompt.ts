@@ -6,7 +6,7 @@ export async function askDetailChoice(): Promise<string> {
 
   try {
     const answer = await rl.question(
-      "[M]ore [E]xamples [S]ynonyms [A]ntonyms [F]orms [O]nline [C]opy [Q]uit | type next word: ",
+      "[M]ore [E]xamples [S]ynonyms [A]ntonyms [F]orms [O]nline [C]opy [Q]uit | type next word then Enter: ",
     );
     return answer.trim();
   } finally {
@@ -39,7 +39,9 @@ export async function askNextLookupQuery(): Promise<string | null> {
   const rl = createInterface({ input: stdin, output: stdout });
 
   try {
-    const answer = await rl.question("Next word (Enter/q to quit, or type another query): ");
+    const answer = await rl.question(
+      "Next word (Enter to quit, or type query then Enter; q/quit/exit also quits): ",
+    );
     const trimmed = answer.trim();
     if (!trimmed) {
       return null;
