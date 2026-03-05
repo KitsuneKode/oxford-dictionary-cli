@@ -3,100 +3,97 @@
 _oxf() {
   emulate -L zsh
 
-  local cur prev cmd action
-  cur="${words[CURRENT]}"
-  prev="${words[CURRENT - 1]}"
-  cmd="${words[2]}"
-  action="${words[3]}"
+  local context curcontext="$curcontext" state line ret=1
+  typeset -A opt_args
+  typeset -a _arguments_options
+  _arguments_options=(-s -S -C)
 
-  local -a top_commands lookup_flags sync_flags config_actions config_keys channels
-  top_commands=("lookup" "sync" "status" "doctor" "config" "--help" "-h")
-  lookup_flags=("--json" "--more" "--online" "--timeout" "--no-color")
-  sync_flags=("--channel" "--manifest")
-  config_actions=("get" "set")
-  config_keys=("syncManifestUrl" "enrichmentCacheTtlHours" "timeoutMs" "color")
-  channels=("stable" "latest")
+  _arguments "${_arguments_options[@]}" \
+    "-h[Show help]" \
+    "--help[Show help]" \
+    "1:command:->oxf-command" \
+    "*::arg:->oxf-args" && ret=0
 
-  if [[ $CURRENT -eq 2 ]]; then
-    compadd -a top_commands
-    return 0
-  fi
-
-  case "$cmd" in
-    lookup)
-      if [[ "$prev" == "--timeout" ]]; then
-        _message "milliseconds"
-        return 0
-      fi
-
-      if [[ "$cur" == -* ]]; then
-        compadd -a lookup_flags
-      fi
-      return 0
+  case "$state" in
+    oxf-command)
+      _values "oxf command" \
+        "lookup[Lookup a word]" \
+        "sync[Sync dictionary dataset]" \
+        "status[Show local dataset status]" \
+        "doctor[Run environment checks]" \
+        "config[Get or set configuration values]" \
+        "--help[Show help]" \
+        "-h[Show help]"
+      ret=0
       ;;
-    sync)
-      if [[ "$prev" == "--channel" ]]; then
-        compadd -a channels
-        return 0
-      fi
-
-      if [[ "$prev" == "--manifest" ]]; then
-        _files
-        return 0
-      fi
-
-      if [[ "$cur" == -* ]]; then
-        compadd -a sync_flags
-      fi
-      return 0
-      ;;
-    config)
-      if [[ $CURRENT -eq 3 ]]; then
-        compadd -a config_actions
-        return 0
-      fi
-
-      case "$action" in
-        get)
-          if [[ $CURRENT -eq 4 ]]; then
-            compadd -a config_keys
-          fi
-          return 0
+    oxf-args)
+      case "${words[2]}" in
+        lookup)
+          _arguments "${_arguments_options[@]}" \
+            "--json[Print JSON output]" \
+            "--more[Show detailed local sections]" \
+            "--online[Enable online enrichment]" \
+            "--timeout[Set timeout in milliseconds]:milliseconds:" \
+            "--no-color[Disable color output]" \
+            "*:word:_default" && ret=0
           ;;
-        set)
-          if [[ $CURRENT -eq 4 ]]; then
-            compadd -a config_keys
-            return 0
-          fi
+        sync)
+          _arguments "${_arguments_options[@]}" \
+            "--channel[Choose sync channel]:channel:(stable latest)" \
+            "--manifest[Manifest URL or local path]:manifest:_files" && ret=0
+          ;;
+        config)
+          _arguments "${_arguments_options[@]}" \
+            "1:action:(get set)" \
+            "2:key:->oxf-config-key" \
+            "3:value:->oxf-config-value" && ret=0
 
-          if [[ $CURRENT -eq 5 ]]; then
-            case "${words[4]}" in
-              color)
-                compadd true false
-                ;;
-              syncManifestUrl)
-                _files
-                ;;
-              *)
-                _message "value"
-                ;;
-            esac
-          fi
-          return 0
+          case "$state" in
+            oxf-config-key)
+              _values "config key" \
+                "syncManifestUrl" \
+                "enrichmentCacheTtlHours" \
+                "timeoutMs" \
+                "color"
+              ret=0
+              ;;
+            oxf-config-value)
+              case "${words[4]}" in
+                color)
+                  _values "boolean" true false
+                  ;;
+                syncManifestUrl)
+                  _files
+                  ;;
+                *)
+                  _message "value"
+                  ;;
+              esac
+              ret=0
+              ;;
+          esac
+          ;;
+        status | doctor | --help | -h)
+          ret=0
+          ;;
+        *)
+          # direct mode (`oxf <word>`) intentionally has no special completion.
+          ret=0
           ;;
       esac
-      return 0
-      ;;
-    status|doctor|--help|-h)
-      return 0
-      ;;
-    *)
-      # direct mode: `oxf <word>`
-      return 0
       ;;
   esac
+
+  return ret
 }
 
-if (( $+functions[compdef] )); then
+if [ "$funcstack[1]" = "_oxf" ]; then
+  _oxf "$@"
+else
+  if ! (( $+functions[compdef] )); then
+    autoload -Uz compinit
+    compinit -i -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
+  fi
+
   compdef _oxf oxf
 fi
