@@ -88,6 +88,13 @@ source ./completions/oxf.bash
 source ./completions/oxf.zsh
 ```
 
+If completions still do not appear, reload zsh completion cache once:
+
+```bash
+rm -f "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"*
+exec zsh
+```
+
 Enable permanently (recommended):
 
 ```bash
@@ -108,6 +115,7 @@ Then add this to `~/.zshrc` if not already present:
 fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit
 compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
+source ~/.zsh/completions/_oxf
 ```
 
 ## How to use (practical)
