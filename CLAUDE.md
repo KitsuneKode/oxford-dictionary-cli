@@ -9,6 +9,13 @@ Default to using Bun instead of Node.js.
 - Use `bunx <package> <command>` instead of `npx <package> <command>`
 - Bun automatically loads .env, so don't use dotenv.
 
+## Release workflow
+
+- `package.json` version is the release source of truth.
+- `.github/workflows/ci.yml` records the validated package version in the workflow summary.
+- `.github/workflows/release.yml` runs on pushes to `main` and manual dispatch. When `NPM_TOKEN` is configured and the version is not already on npm, it publishes the exact `package.json` version and creates a GitHub release tagged `vX.Y.Z`.
+- `oxf` release assets must include `manifest.json`, `full.db`, `checksums-vX.Y.Z.txt`, and `oxf-linux-x64-vX.Y.Z.tar.gz` so `oxf sync` and future binary distribution stay aligned with the tagged release.
+
 ## APIs
 
 - `Bun.serve()` supports WebSockets, HTTPS, and routes. Don't use `express`.
