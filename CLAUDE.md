@@ -15,7 +15,8 @@ Default to using Bun instead of Node.js.
 - `.github/workflows/version-packages.yml` opens or updates the `Version Packages` PR from merged changesets
 - merging the version PR updates `package.json` and changelog entries for the next release
 - `.github/workflows/ci.yml` records the validated package version in the workflow summary.
-- `.github/workflows/release.yml` runs on pushes to `main` and manual dispatch. When `NPM_TOKEN` is configured and the version is not already on npm, it publishes the exact `package.json` version and creates a GitHub release tagged `vX.Y.Z`.
+- `.github/workflows/release.yml` runs on pushes to `main` and manual dispatch. It uses npm trusted publishing from `release.yml` to publish the exact `package.json` version and create a GitHub release tagged `vX.Y.Z`.
+- For brand-new packages, bootstrap the first publish manually so the npm package settings page exists and can be connected to the trusted publisher.
 - `oxf` release assets must include `manifest.json`, `full.db`, `checksums-vX.Y.Z.txt`, and `oxf-linux-x64-vX.Y.Z.tar.gz` so `oxf sync` and future binary distribution stay aligned with the tagged release.
 
 ## APIs

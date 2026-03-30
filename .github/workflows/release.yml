@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 concurrency:
   group: release-${{ github.repository }}
@@ -27,6 +28,12 @@ jobs:
         uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
@@ -89,8 +96,6 @@ jobs:
 
       - name: Plan release actions
         id: plan
-        env:
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           published="${{ steps.npm.outputs.published }}"
           release_exists="${{ steps.gh_release.outputs.exists }}"
@@ -99,25 +104,19 @@ jobs:
           has_binary="${{ steps.gh_release.outputs.has_binary }}"
           has_checksums="${{ steps.gh_release.outputs.has_checksums }}"
 
-          if [ "$published" = "false" ] && [ -n "$NPM_TOKEN" ]; then
+          if [ "$published" = "false" ]; then
             echo "should_publish=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_publish=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if [ "$published" = "false" ] && [ -z "$NPM_TOKEN" ]; then
-            echo "missing_token=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "missing_token=false" >> "$GITHUB_OUTPUT"
-          fi
-
-          if [ "$release_exists" = "false" ] && { [ "$published" = "true" ] || [ -n "$NPM_TOKEN" ]; }; then
+          if [ "$release_exists" = "false" ]; then
             echo "should_release=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_release=false" >> "$GITHUB_OUTPUT"
           fi
 
-          if { [ "$release_exists" = "false" ] || [ "$has_manifest" = "false" ] || [ "$has_full_db" = "false" ] || [ "$has_binary" = "false" ] || [ "$has_checksums" = "false" ]; } && { [ "$published" = "true" ] || [ -n "$NPM_TOKEN" ]; }; then
+          if [ "$release_exists" = "false" ] || [ "$has_manifest" = "false" ] || [ "$has_full_db" = "false" ] || [ "$has_binary" = "false" ] || [ "$has_checksums" = "false" ]; then
             echo "should_upload_assets=true" >> "$GITHUB_OUTPUT"
           else
             echo "should_upload_assets=false" >> "$GITHUB_OUTPUT"
@@ -136,20 +135,9 @@ jobs:
             echo "- Release has full.db: \`${{ steps.gh_release.outputs.has_full_db }}\`"
             echo "- Release has ${{ steps.package.outputs.binary_asset }}: \`${{ steps.gh_release.outputs.has_binary }}\`"
             echo "- Release has ${{ steps.package.outputs.checksums_asset }}: \`${{ steps.gh_release.outputs.has_checksums }}\`"
-            echo "- Will publish to npm: \`${{ steps.plan.outputs.should_publish }}\`"
+            echo "- Will publish to npm via trusted publishing: \`${{ steps.plan.outputs.should_publish }}\`"
             echo "- Will create GitHub release: \`${{ steps.plan.outputs.should_release }}\`"
             echo "- Will upload release assets: \`${{ steps.plan.outputs.should_upload_assets }}\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Note missing NPM token
-        if: steps.plan.outputs.missing_token == 'true'
-        run: |
-          {
-            echo "NPM_TOKEN is not configured."
-            echo
-            echo "- npm publish was skipped"
-            echo "- GitHub release creation was skipped until npm publishing is possible"
-            echo "- release asset upload was skipped because the package version is not on npm yet"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify release build
@@ -160,8 +148,6 @@ jobs:
 
       - name: Publish to npm
         if: steps.plan.outputs.should_publish == 'true'
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
 
       - name: Prepare release assets

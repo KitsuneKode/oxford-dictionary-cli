@@ -75,7 +75,8 @@ Published wrapper: `bin/oxf` (global command: `oxf`)
 - `.github/workflows/version-packages.yml` opens or updates a `Version Packages` PR from merged changesets.
 - Merging the version PR updates `package.json` and changelog entries for the next release.
 - `CI` runs on pull requests and `main`, and its workflow summary records the exact package version it validated.
-- `Release` runs on pushes to `main` and manual dispatch. If the version is not on npm yet and `NPM_TOKEN` is configured in GitHub secrets, it publishes the exact `package.json` version of `@kitsunekode/oxf`, creates a GitHub release tagged `vX.Y.Z`, and uploads `manifest.json`, `full.db`, `checksums-vX.Y.Z.txt`, and `oxf-linux-x64-vX.Y.Z.tar.gz`.
+- `Release` runs on pushes to `main` and manual dispatch. It publishes the exact `package.json` version of `@kitsunekode/oxf` through npm trusted publishing, creates a GitHub release tagged `vX.Y.Z`, and uploads `manifest.json`, `full.db`, `checksums-vX.Y.Z.txt`, and `oxf-linux-x64-vX.Y.Z.tar.gz`.
+- For a brand-new package, do one manual bootstrap publish first so the npm package settings page exists and you can attach the trusted publisher to `release.yml`.
 
 ## Usage
 
