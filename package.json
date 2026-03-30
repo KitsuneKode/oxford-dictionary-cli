@@ -50,6 +50,8 @@
     "check": "bun run typecheck && bun run lint && bun run lint:md && bun test",
     "pkg:check": "bun run build && publint && npm pack --dry-run --ignore-scripts",
     "check:all": "bun run check && bun run pkg:check",
+    "changeset": "changeset",
+    "version:packages": "changeset version",
     "lint-staged": "lint-staged",
     "commitlint": "commitlint --edit",
     "prepare": "[ -f .git/config ] && [ -w .git/config ] && husky || echo 'Skipping husky install (no writable .git config)'",
@@ -61,6 +63,7 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.5",
+    "@changesets/cli": "^2.30.0",
     "@commitlint/cli": "^20.4.3",
     "@commitlint/config-conventional": "^20.4.3",
     "@types/bun": "latest",
