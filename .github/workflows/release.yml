@@ -1,0 +1,199 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.repository }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Read package metadata
+        id: package
+        run: |
+          name=$(bun -e 'const pkg = JSON.parse(await Bun.file("package.json").text()); console.log(pkg.name)')
+          version=$(bun -e 'const pkg = JSON.parse(await Bun.file("package.json").text()); console.log(pkg.version)')
+          echo "name=$name" >> "$GITHUB_OUTPUT"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          echo "tag=v$version" >> "$GITHUB_OUTPUT"
+          echo "binary_asset=oxf-linux-x64-v$version.tar.gz" >> "$GITHUB_OUTPUT"
+          echo "checksums_asset=checksums-v$version.txt" >> "$GITHUB_OUTPUT"
+
+      - name: Check npm publish state
+        id: npm
+        run: |
+          if npm view "${{ steps.package.outputs.name }}@${{ steps.package.outputs.version }}" version >/dev/null 2>&1; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Check GitHub release state
+        id: gh_release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if gh release view "${{ steps.package.outputs.tag }}" >/dev/null 2>&1; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            gh release view "${{ steps.package.outputs.tag }}" --json assets --jq '.assets[].name' > release-assets.txt
+            if grep -Fxq "manifest.json" release-assets.txt; then
+              echo "has_manifest=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_manifest=false" >> "$GITHUB_OUTPUT"
+            fi
+            if grep -Fxq "full.db" release-assets.txt; then
+              echo "has_full_db=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_full_db=false" >> "$GITHUB_OUTPUT"
+            fi
+            if grep -Fxq "${{ steps.package.outputs.binary_asset }}" release-assets.txt; then
+              echo "has_binary=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_binary=false" >> "$GITHUB_OUTPUT"
+            fi
+            if grep -Fxq "${{ steps.package.outputs.checksums_asset }}" release-assets.txt; then
+              echo "has_checksums=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "has_checksums=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "has_manifest=false" >> "$GITHUB_OUTPUT"
+            echo "has_full_db=false" >> "$GITHUB_OUTPUT"
+            echo "has_binary=false" >> "$GITHUB_OUTPUT"
+            echo "has_checksums=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Plan release actions
+        id: plan
+        env:
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          published="${{ steps.npm.outputs.published }}"
+          release_exists="${{ steps.gh_release.outputs.exists }}"
+          has_manifest="${{ steps.gh_release.outputs.has_manifest }}"
+          has_full_db="${{ steps.gh_release.outputs.has_full_db }}"
+          has_binary="${{ steps.gh_release.outputs.has_binary }}"
+          has_checksums="${{ steps.gh_release.outputs.has_checksums }}"
+
+          if [ "$published" = "false" ] && [ -n "$NPM_TOKEN" ]; then
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$published" = "false" ] && [ -z "$NPM_TOKEN" ]; then
+            echo "missing_token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "missing_token=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if [ "$release_exists" = "false" ] && { [ "$published" = "true" ] || [ -n "$NPM_TOKEN" ]; }; then
+            echo "should_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_release=false" >> "$GITHUB_OUTPUT"
+          fi
+
+          if { [ "$release_exists" = "false" ] || [ "$has_manifest" = "false" ] || [ "$has_full_db" = "false" ] || [ "$has_binary" = "false" ] || [ "$has_checksums" = "false" ]; } && { [ "$published" = "true" ] || [ -n "$NPM_TOKEN" ]; }; then
+            echo "should_upload_assets=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "should_upload_assets=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Summarize release plan
+        run: |
+          {
+            echo "Release plan for \`${{ steps.package.outputs.name }}\`"
+            echo
+            echo "- Version: \`${{ steps.package.outputs.version }}\`"
+            echo "- Tag: \`${{ steps.package.outputs.tag }}\`"
+            echo "- Already on npm: \`${{ steps.npm.outputs.published }}\`"
+            echo "- GitHub release exists: \`${{ steps.gh_release.outputs.exists }}\`"
+            echo "- Release has manifest.json: \`${{ steps.gh_release.outputs.has_manifest }}\`"
+            echo "- Release has full.db: \`${{ steps.gh_release.outputs.has_full_db }}\`"
+            echo "- Release has ${{ steps.package.outputs.binary_asset }}: \`${{ steps.gh_release.outputs.has_binary }}\`"
+            echo "- Release has ${{ steps.package.outputs.checksums_asset }}: \`${{ steps.gh_release.outputs.has_checksums }}\`"
+            echo "- Will publish to npm: \`${{ steps.plan.outputs.should_publish }}\`"
+            echo "- Will create GitHub release: \`${{ steps.plan.outputs.should_release }}\`"
+            echo "- Will upload release assets: \`${{ steps.plan.outputs.should_upload_assets }}\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Note missing NPM token
+        if: steps.plan.outputs.missing_token == 'true'
+        run: |
+          {
+            echo "NPM_TOKEN is not configured."
+            echo
+            echo "- npm publish was skipped"
+            echo "- GitHub release creation was skipped until npm publishing is possible"
+            echo "- release asset upload was skipped because the package version is not on npm yet"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Verify release build
+        if: steps.plan.outputs.should_publish == 'true' || steps.plan.outputs.should_upload_assets == 'true'
+        run: |
+          bun run check
+          bun run pkg:check
+
+      - name: Publish to npm
+        if: steps.plan.outputs.should_publish == 'true'
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+      - name: Prepare release assets
+        if: steps.plan.outputs.should_upload_assets == 'true'
+        run: |
+          rm -rf dist/release
+          mkdir -p dist/release
+          bun run build:full
+          cp assets/manifest.json dist/release/manifest.json
+          cp assets/full.db dist/release/full.db
+          bun build --compile --target=bun --outfile dist/release/oxf bin/oxf.ts
+          tar -C dist/release -czf "dist/release/${{ steps.package.outputs.binary_asset }}" oxf
+          sha256sum \
+            dist/release/manifest.json \
+            dist/release/full.db \
+            "dist/release/${{ steps.package.outputs.binary_asset }}" \
+            > "dist/release/${{ steps.package.outputs.checksums_asset }}"
+
+      - name: Create GitHub release
+        if: steps.plan.outputs.should_release == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.package.outputs.tag }}" --generate-notes --title "${{ steps.package.outputs.tag }}"
+
+      - name: Upload release assets
+        if: steps.plan.outputs.should_upload_assets == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release upload "${{ steps.package.outputs.tag }}" \
+            dist/release/manifest.json \
+            dist/release/full.db \
+            "dist/release/${{ steps.package.outputs.binary_asset }}" \
+            "dist/release/${{ steps.package.outputs.checksums_asset }}" \
+            --clobber

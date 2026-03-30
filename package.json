@@ -33,7 +33,7 @@
     "LICENSE"
   ],
   "bin": {
-    "oxf": "./bin/oxf"
+    "oxf": "bin/oxf"
   },
   "scripts": {
     "start": "bun run bin/oxf.ts",
