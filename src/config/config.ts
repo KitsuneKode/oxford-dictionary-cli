@@ -3,7 +3,8 @@ import { mkdir } from "node:fs/promises";
 import type { OxfConfig } from "../types";
 import { getAppPaths } from "./paths";
 
-const DEFAULT_SYNC_MANIFEST_URL = "https://example.com/oxf/manifest.json";
+const DEFAULT_SYNC_MANIFEST_URL =
+  "https://github.com/KitsuneKode/oxford-dictionary-cli/releases/latest/download/manifest.json";
 
 const CONFIG_KEYS = ["syncManifestUrl", "enrichmentCacheTtlHours", "timeoutMs", "color"] as const;
 

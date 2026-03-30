@@ -1,17 +1,46 @@
 {
-  "name": "oxf",
+  "name": "@kitsunekode/oxf",
   "version": "0.1.0",
   "description": "High-performance local-first dictionary CLI built with Bun",
-  "module": "src/cli.ts",
   "type": "module",
-  "private": true,
+  "license": "MIT",
+  "author": "kitsunekode",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KitsuneKode/oxford-dictionary-cli.git"
+  },
+  "homepage": "https://github.com/KitsuneKode/oxford-dictionary-cli#readme",
+  "bugs": {
+    "url": "https://github.com/KitsuneKode/oxford-dictionary-cli/issues"
+  },
+  "keywords": [
+    "bun",
+    "cli",
+    "dictionary",
+    "language",
+    "local-first",
+    "offline",
+    "wordnet"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "bin/oxf",
+    "dist/oxf.js",
+    "completions",
+    "README.md",
+    "LICENSE"
+  ],
   "bin": {
-    "oxf": "./bin/oxf.ts"
+    "oxf": "./bin/oxf"
   },
   "scripts": {
     "start": "bun run bin/oxf.ts",
-    "link:global": "bun link",
+    "build": "mkdir -p dist && bun build --minify --target bun --outfile dist/oxf.js bin/oxf.ts",
+    "link:global": "bun run build && bun link",
     "unlink:global": "bun unlink",
+    "relink:global": "bun unlink && bun run link:global",
     "test": "bun test",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
@@ -19,11 +48,13 @@
     "lint:md:fix": "markdownlint-cli2 --fix \"**/*.md\" \"#node_modules\" \"#.worktrees\"",
     "format": "biome format --write .",
     "check": "bun run typecheck && bun run lint && bun run lint:md && bun test",
-    "pkg:check": "publint && npm pack --dry-run",
+    "pkg:check": "bun run build && publint && npm pack --dry-run --ignore-scripts",
     "check:all": "bun run check && bun run pkg:check",
     "lint-staged": "lint-staged",
     "commitlint": "commitlint --edit",
-    "prepare": "[ -d .git ] && husky || echo 'Skipping husky install (no .git directory)'",
+    "prepare": "[ -f .git/config ] && [ -w .git/config ] && husky || echo 'Skipping husky install (no writable .git config)'",
+    "prepack": "bun run build",
+    "prepublishOnly": "bun run check && bun run build",
     "typecheck": "bunx tsc --noEmit",
     "build:core": "bun run scripts/build-core.ts",
     "build:full": "bun run scripts/build-full.ts"
