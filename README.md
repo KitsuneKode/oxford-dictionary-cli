@@ -6,10 +6,23 @@ High-performance local-first dictionary CLI built with Bun + TypeScript.
 
 - Bun `>= 1.3.9`
 
-## Install dependencies
+## Install
+
+```bash
+bun add -g @kitsunekode/oxf
+```
+
+You can also install with npm if Bun is already available on your `PATH` at runtime:
+
+```bash
+npm install -g @kitsunekode/oxf
+```
+
+### Install from source
 
 ```bash
 bun install
+bun run link:global
 ```
 
 ## Run locally (no global install)
@@ -22,42 +35,38 @@ bun run start -- lookup dogmatic --more
 bun run start -- status
 ```
 
-## Install system-wide with Bun link
+## First-time offline setup (recommended)
 
 ```bash
-bun run link:global
-oxf dogmatic
+oxf sync --channel stable
 oxf status
 ```
 
-To remove the global link:
+The published package includes the fast core lexicon. `oxf sync` pulls the larger offline dataset from the latest GitHub release manifest by default.
 
-```bash
-bun run unlink:global
-```
+## Local dataset workflow
 
-## First-time offline setup (recommended)
-
-1. Build local dataset artifacts:
+If you are working from the repo and want to build the larger dataset locally:
 
 ```bash
 bun run build:core
 bun run build:full
-```
-
-2. Sync from local manifest artifact:
-
-```bash
 bun run start -- sync --channel stable --manifest ./assets/manifest.json
 ```
 
-3. Re-check status:
+Re-check status:
 
 ```bash
 bun run start -- status
 ```
 
-Executable entrypoint: `bin/oxf.ts` (global command: `oxf`)
+To remove the global source link:
+
+```bash
+bun run unlink:global
+```
+
+Published wrapper: `bin/oxf` (global command: `oxf`)
 
 ## Usage
 
