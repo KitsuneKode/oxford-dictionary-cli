@@ -175,7 +175,7 @@ oxf dogmatic
 ## Data coverage and fallback behavior
 
 - Current bundled local dataset is intentionally small (`core-1.0.0`, 15 entries) for instant first-run speed.
-- `build:full` now builds a much larger offline dataset from WordNet 3.1 into `assets/full.db`.
+- `build:full` generates a large offline dataset from WordNet 3.1 into `assets/full.db` (local only, not committed).
 - After `build:full` + `sync`, local coverage is significantly broader.
 - If no local exact match:
   - `oxf` first attempts a short-timeout online exact lookup.

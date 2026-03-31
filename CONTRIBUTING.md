@@ -55,8 +55,9 @@ bun run test
 
 ## Data and assets
 
-- Keep generated DB artifacts intentional.
-- If you change DB generation logic (`scripts/build-*.ts`), regenerate related assets and manifest.
+- `assets/full.db` is a build artifact — do NOT commit it. Generate it locally with `bun run build:full` or let CI produce it for releases.
+- `assets/core.db` and `assets/manifest.json` ARE committed.
+- If you change DB generation logic (`scripts/build-*.ts`), regenerate related assets and the manifest locally.
 - Avoid adding temporary debug scripts at repo root. Put reusable checks under `test/`.
 
 ## Pull requests
