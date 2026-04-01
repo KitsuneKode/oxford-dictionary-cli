@@ -6,7 +6,13 @@ import { getAppPaths } from "./paths";
 const DEFAULT_SYNC_MANIFEST_URL =
   "https://github.com/KitsuneKode/oxford-dictionary-cli/releases/latest/download/manifest.json";
 
-const CONFIG_KEYS = ["syncManifestUrl", "enrichmentCacheTtlHours", "timeoutMs", "color"] as const;
+const CONFIG_KEYS = [
+  "syncManifestUrl",
+  "enrichmentCacheTtlHours",
+  "timeoutMs",
+  "color",
+  "autoSync",
+] as const;
 
 export type ConfigKey = (typeof CONFIG_KEYS)[number];
 
@@ -25,6 +31,7 @@ function defaultConfig(): OxfConfig {
     enrichmentCacheTtlHours: 24 * 7,
     timeoutMs: 2500,
     color: true,
+    autoSync: true,
   };
 }
 
@@ -78,6 +85,13 @@ export async function setConfigValue(key: ConfigKey, rawValue: string): Promise<
         throw new Error("color must be true or false");
       }
       config.color = rawValue === "true";
+      break;
+    }
+    case "autoSync": {
+      if (rawValue !== "true" && rawValue !== "false") {
+        throw new Error("autoSync must be true or false");
+      }
+      config.autoSync = rawValue === "true";
       break;
     }
   }

@@ -64,4 +64,5 @@ export interface OxfConfig {
   enrichmentCacheTtlHours: number;
   timeoutMs: number;
   color: boolean;
+  autoSync: boolean;
 }

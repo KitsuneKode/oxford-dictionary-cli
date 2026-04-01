@@ -30,6 +30,7 @@ Config keys:
   enrichmentCacheTtlHours
   timeoutMs
   color
+  autoSync
 `);
 }
 

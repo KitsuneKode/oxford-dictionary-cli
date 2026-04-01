@@ -11,7 +11,7 @@ export async function runConfigCommand(args: string[]): Promise<number> {
 
   if (!key || !isConfigKey(key)) {
     console.error(
-      "Invalid key. Allowed keys: syncManifestUrl, enrichmentCacheTtlHours, timeoutMs, color",
+      "Invalid key. Allowed keys: syncManifestUrl, enrichmentCacheTtlHours, timeoutMs, color, autoSync",
     );
     return 1;
   }

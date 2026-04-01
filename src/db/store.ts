@@ -1,9 +1,11 @@
 import { Database } from "bun:sqlite";
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { levenshteinDistance } from "../domain/levenshtein";
 import { lemmaCandidates } from "../domain/morphology";
 import { normalizeWord } from "../domain/normalize";
 import type { DictionaryEntry, OnlineEnrichment, OxfConfig, Suggestion } from "../types";
+import { syncDataset } from "../util/sync";
 import { applyPragmas } from "./pragmas";
 import { ensureSchema } from "./schema";
 import { seedCoreLexicon } from "./seed";
@@ -271,6 +273,39 @@ export class DictionaryStore {
 
 export async function openDictionaryStore(config: OxfConfig): Promise<DictionaryStore> {
   await mkdir(config.dataDir, { recursive: true });
+
+  if (config.autoSync) {
+    const dbExists = existsSync(config.dbPath);
+    let needsSync = !dbExists;
+
+    if (dbExists) {
+      try {
+        const tempDb = new Database(config.dbPath, { create: false, readonly: true });
+        try {
+          const meta = tempDb
+            .query<{ value: string }, []>("SELECT value FROM meta WHERE key = 'dataset_source'")
+            .get();
+          if (meta?.value === "bundled-core") {
+            needsSync = true;
+          }
+        } finally {
+          tempDb.close();
+        }
+      } catch {
+        // Corrupted or unreadable DB — will recreate
+      }
+    }
+
+    if (needsSync) {
+      const result = await syncDataset(config, { channel: "stable" });
+      if (!result.success) {
+        console.warn(
+          `Auto-sync failed (${result.error ?? "unknown error"}). Falling back to bundled core lexicon.`,
+        );
+      }
+    }
+  }
+
   const db = new Database(config.dbPath, { create: true });
   applyPragmas(db);
   ensureSchema(db);
