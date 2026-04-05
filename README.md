@@ -35,14 +35,16 @@ bun run start -- lookup dogmatic --more
 bun run start -- status
 ```
 
-## First-time offline setup (recommended)
+## First-time setup (do this first)
 
 ```bash
-oxf sync --channel stable
+oxf setup
 oxf status
 ```
 
-The published package includes the fast core lexicon. `oxf sync` pulls the larger offline dataset from the latest GitHub release manifest by default.
+`oxf setup` downloads the full offline dataset (~46 MB) from the latest GitHub release and installs it locally. This takes ~30 seconds on a good connection. Once set up, all lookups are instant and fully offline.
+
+The published package includes a small core lexicon (15 entries) so the CLI works immediately, but running `oxf setup` first gives you full WordNet coverage.
 
 ## Local dataset workflow
 
@@ -166,8 +168,8 @@ oxf dogmatic
 
 ## Notes
 
-- First use is instant with bundled local core lexicon.
-- `oxf sync` can replace local DB using a manifest URL/path (for large offline coverage).
+- Run `oxf setup` first for full offline coverage (WordNet 3.1, ~150k entries).
+- `oxf sync` can update or replace the local dataset using a manifest URL/path.
 - Online enrichment is opt-in only (`--online` or interactive `O`).
 - If a word is missing locally, `oxf` attempts a fast smart online fallback (exact first, then relevant candidates) and caches results.
 - In interactive terminal mode, you can keep searching continuously and exit with `q`/`quit` or `Ctrl+C`.
@@ -175,6 +177,7 @@ oxf dogmatic
 ## Data coverage and fallback behavior
 
 - Current bundled local dataset is intentionally small (`core-1.0.0`, 15 entries) for instant first-run speed.
+- Run `oxf setup` to download the full WordNet 3.1 dataset (~150k entries) for comprehensive offline coverage.
 - `build:full` generates a large offline dataset from WordNet 3.1 into `assets/full.db` (local only, not committed).
 - After `build:full` + `sync`, local coverage is significantly broader.
 - If no local exact match:

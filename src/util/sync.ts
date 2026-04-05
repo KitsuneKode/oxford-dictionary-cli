@@ -26,7 +26,9 @@ function isFileUrl(value: string): boolean {
   return value.startsWith("file://");
 }
 
-async function readManifest(source: string): Promise<{ manifest: SyncManifest; source: string }> {
+export async function readManifest(
+  source: string,
+): Promise<{ manifest: SyncManifest; source: string }> {
   if (isHttpUrl(source)) {
     const response = await fetch(source);
     if (!response.ok) {
@@ -48,7 +50,7 @@ async function readManifest(source: string): Promise<{ manifest: SyncManifest; s
   };
 }
 
-function resolveAssetLocation(manifestSource: string, asset: string): string {
+export function resolveAssetLocation(manifestSource: string, asset: string): string {
   if (isHttpUrl(asset) || isFileUrl(asset) || isAbsolute(asset)) {
     return asset;
   }
@@ -61,7 +63,7 @@ function resolveAssetLocation(manifestSource: string, asset: string): string {
   return resolve(dirname(basePath), asset);
 }
 
-async function readBytes(location: string): Promise<Uint8Array> {
+export async function readBytes(location: string): Promise<Uint8Array> {
   if (isHttpUrl(location)) {
     const response = await fetch(location);
     if (!response.ok) {
@@ -76,7 +78,59 @@ async function readBytes(location: string): Promise<Uint8Array> {
   return await Bun.file(path).bytes();
 }
 
-function looksLikeSqlite(bytes: Uint8Array): boolean {
+export async function readBytesWithProgress(
+  location: string,
+  expectedSize: number | undefined,
+  onProgress: (current: number, total: number) => void,
+): Promise<Uint8Array> {
+  if (isFileUrl(location) || (!isHttpUrl(location) && !isFileUrl(location))) {
+    const path = isFileUrl(location) ? fileURLToPath(location) : location;
+    const file = Bun.file(path);
+    const total = file.size;
+    const bytes = await file.bytes();
+    onProgress(bytes.byteLength, total);
+    return bytes;
+  }
+
+  const response = await fetch(location);
+  if (!response.ok) {
+    throw new Error(`Dataset request failed with status ${response.status}`);
+  }
+
+  const total = expectedSize ?? Number(response.headers.get("content-length")) ?? 0;
+  const reader = response.body?.getReader();
+  if (!reader) {
+    throw new Error("Response body is not readable.");
+  }
+
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+    received += value.byteLength;
+    if (total > 0) {
+      onProgress(received, total);
+    }
+  }
+
+  const result = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  if (total > 0) {
+    onProgress(received, total);
+  }
+
+  return result;
+}
+
+export function looksLikeSqlite(bytes: Uint8Array): boolean {
   const signature = "SQLite format 3\u0000";
   if (bytes.byteLength < signature.length) {
     return false;

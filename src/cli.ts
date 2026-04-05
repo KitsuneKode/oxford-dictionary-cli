@@ -1,6 +1,7 @@
 import { runConfigCommand } from "./commands/config";
 import { runDoctorCommand } from "./commands/doctor";
 import { runLookupCommand } from "./commands/lookup";
+import { runSetupCommand } from "./commands/setup";
 import { runStatusCommand } from "./commands/status";
 import { runSyncCommand } from "./commands/sync";
 import { loadConfig } from "./config/config";
@@ -19,6 +20,7 @@ function printHelp(): void {
 Usage:
   oxf <word>
   oxf lookup <word> [--json] [--more] [--online] [--timeout <ms>] [--no-color]
+  oxf setup [--channel stable|latest] [--manifest <url-or-path>]
   oxf sync [--channel stable|latest] [--manifest <url-or-path>]
   oxf status
   oxf doctor
@@ -204,6 +206,11 @@ export async function runCli(argv: string[]): Promise<number> {
   if (first === "sync") {
     const options = parseSyncArgs(rest);
     return await runSyncCommand(config, options);
+  }
+
+  if (first === "setup") {
+    const options = parseSyncArgs(rest);
+    return await runSetupCommand(config, options);
   }
 
   if (first === "status") {

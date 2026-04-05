@@ -12,6 +12,7 @@ Thanks for contributing. This project is a Bun + TypeScript CLI with a local-fir
 ```bash
 bun install
 bun run build:core
+bun run start -- setup --manifest ./assets/manifest.json
 ```
 
 Optional full offline dataset:
