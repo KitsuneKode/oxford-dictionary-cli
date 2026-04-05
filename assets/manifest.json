@@ -3,16 +3,16 @@
     "stable": {
       "version": "wordnet-3.1",
       "url": "full.db",
-      "sha256": "3482df1d570903c9015524b7ffbfacf95a68b4de3b7eb56d8dc6b5a73f6cde75",
+      "sha256": "8515672b887f8d9c9c882b9a0b9db1c6b773b4389bfcec31aca0a40bb214095d",
       "sizeBytes": 47648768,
-      "updatedAt": "2026-03-04T14:34:32.101Z"
+      "updatedAt": "2026-04-05T19:49:33.222Z"
     },
     "latest": {
       "version": "wordnet-3.1",
       "url": "full.db",
-      "sha256": "3482df1d570903c9015524b7ffbfacf95a68b4de3b7eb56d8dc6b5a73f6cde75",
+      "sha256": "8515672b887f8d9c9c882b9a0b9db1c6b773b4389bfcec31aca0a40bb214095d",
       "sizeBytes": 47648768,
-      "updatedAt": "2026-03-04T14:34:32.101Z"
+      "updatedAt": "2026-04-05T19:49:33.222Z"
     }
   }
 }
