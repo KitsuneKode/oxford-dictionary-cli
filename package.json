@@ -1,6 +1,6 @@
 {
   "name": "@kitsunekode/oxf",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "High-performance local-first dictionary CLI built with Bun",
   "type": "module",
   "license": "MIT",
