@@ -1,5 +1,17 @@
 # @kitsunekode/oxf
 
+## 0.2.0
+
+### Minor Changes
+
+- c162dca: # Add oxf setup command with download progress
+
+  - New `oxf setup` command downloads the full WordNet dataset with a visual progress bar
+  - Download progress shows percentage, bytes transferred, and total size
+  - README restructured to recommend `oxf setup` as the first command
+  - `full.db` removed from git, added to .gitignore (released via GitHub assets)
+  - Exported sync utilities (`readManifest`, `resolveAssetLocation`, `readBytesWithProgress`, `looksLikeSqlite`) for reuse
+
 ## 0.1.1
 
 ### Patch Changes
