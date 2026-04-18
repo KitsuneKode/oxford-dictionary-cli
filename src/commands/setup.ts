@@ -1,29 +1,11 @@
 import { existsSync } from "node:fs";
 import type { OxfConfig } from "../types";
+import { clearProgressLine, makeProgressPrinter } from "../ui/progress";
+import { readManifest, resolveAssetLocation, syncDatasetOrThrow } from "../util/sync";
 
 interface SetupOptions {
   channel: string;
   manifest?: string;
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
-}
-
-function printProgress(current: number, total: number): void {
-  const pct = Math.min((current / total) * 100, 100);
-  const filled = Math.round(pct / 5);
-  const bar = "█".repeat(filled) + "░".repeat(20 - filled);
-  const downloaded = formatBytes(current);
-  const totalSize = formatBytes(total);
-  process.stdout.write(`\r  ${bar} ${pct.toFixed(0)}%  ${downloaded} / ${totalSize}`);
-}
-
-function clearProgressLine(): void {
-  process.stdout.write("\r\x1b[K");
 }
 
 export async function runSetupCommand(config: OxfConfig, options: SetupOptions): Promise<number> {
@@ -67,7 +49,6 @@ export async function runSetupCommand(config: OxfConfig, options: SetupOptions):
   }
 
   console.log("1/3  Reading manifest…");
-  const { readManifest } = await import("../util/sync");
   const { manifest, source } = await readManifest(manifestSource);
   const channel = manifest.channels[options.channel];
 
@@ -77,6 +58,7 @@ export async function runSetupCommand(config: OxfConfig, options: SetupOptions):
     return 1;
   }
 
+  const { formatBytes } = await import("../ui/progress");
   console.log(`     Channel: ${options.channel} (${channel.version})`);
   if (channel.sizeBytes) {
     console.log(`     Size: ${formatBytes(channel.sizeBytes)}`);
@@ -84,82 +66,22 @@ export async function runSetupCommand(config: OxfConfig, options: SetupOptions):
   console.log();
 
   console.log("2/3  Downloading dataset…");
-  const { resolveAssetLocation, readBytesWithProgress } = await import("../util/sync");
-  const location = resolveAssetLocation(source, channel.url);
-  const bytes = await readBytesWithProgress(location, channel.sizeBytes, printProgress);
+  const onProgress = makeProgressPrinter();
+  const result = await syncDatasetOrThrow(config, {
+    channel: options.channel,
+    manifestSource: source,
+    onProgress: (current, total) => {
+      onProgress(current, total);
+    },
+  });
   clearProgressLine();
-
-  if (bytes.byteLength === 0) {
-    console.error("Downloaded dataset is empty.");
-    return 1;
-  }
-
-  const { looksLikeSqlite } = await import("../util/sync");
-  if (!looksLikeSqlite(bytes)) {
-    console.error("Downloaded dataset is not a valid SQLite file.");
-    return 1;
-  }
-
-  if (channel.sizeBytes !== undefined && channel.sizeBytes !== bytes.byteLength) {
-    console.error(`Dataset size mismatch. Expected ${channel.sizeBytes}, got ${bytes.byteLength}.`);
-    return 1;
-  }
-
-  const { sha256Hex } = await import("../util/hash");
-  const hash = sha256Hex(bytes).toLowerCase();
-  if (hash !== channel.sha256.toLowerCase()) {
-    console.error("Checksum mismatch. Aborting setup.");
-    return 1;
-  }
 
   console.log("     ✓ Download complete");
   console.log();
-
   console.log("3/3  Installing dataset…");
-  const { atomicReplace } = await import("../util/fs");
-  await atomicReplace(config.dbPath, bytes);
-
-  const { Database } = await import("bun:sqlite");
-  const db = new Database(config.dbPath, { create: true });
-  try {
-    db.exec("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT NOT NULL)");
-    db.query("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)").run(
-      "dataset_version",
-      channel.version,
-    );
-    db.query("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)").run(
-      "dataset_source",
-      location,
-    );
-    db.query("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)").run(
-      "dataset_channel",
-      options.channel,
-    );
-    db.query("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)").run(
-      "dataset_updated_at",
-      new Date().toISOString(),
-    );
-  } finally {
-    db.close();
-  }
-
-  await Bun.write(
-    config.metaPath,
-    JSON.stringify(
-      {
-        channel: options.channel,
-        version: channel.version,
-        updatedAt: new Date().toISOString(),
-        source: location,
-      },
-      null,
-      2,
-    ),
-  );
-
   console.log("     ✓ Installed");
   console.log();
-  console.log(`Setup complete. Dataset: ${channel.version} (${options.channel})`);
+  console.log(`Setup complete. Dataset: ${result.version} (${result.channel})`);
   console.log(`Database: ${config.dbPath}`);
   console.log("Run `oxf <word>` to start looking up words.");
 

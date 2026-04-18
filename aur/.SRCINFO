@@ -1,0 +1,14 @@
+pkgbase = oxf
+pkgver = 0.2.0
+pkgrel = 1
+pkgdesc = High-performance local-first dictionary CLI built with Bun
+arch = x86_64
+url = https://github.com/KitsuneKode/oxford-dictionary-cli
+license = MIT
+provides = oxf
+source = oxf-0.2.0-linux-x64.tar.gz::https://github.com/KitsuneKode/oxford-dictionary-cli/releases/download/v0.2.0/oxf-linux-x64-v0.2.0.tar.gz
+sha256sums = 2dc71e6e2fcde10b817f6ce124cecfc261b9409d48a11ac60b416b9b82f58f9a
+
+package_oxf() {
+  install -Dm755 oxf "${pkgdir}/usr/bin/oxf"
+}

@@ -16,6 +16,7 @@ export interface SyncResult {
 interface SyncOptions {
   channel?: string;
   manifestSource?: string;
+  onProgress?: (current: number, total: number) => void;
 }
 
 function isHttpUrl(value: string): boolean {
@@ -190,7 +191,9 @@ export async function syncDatasetOrThrow(
   }
 
   const datasetLocation = resolveAssetLocation(source, selectedChannel.url);
-  const bytes = await readBytes(datasetLocation);
+  const bytes = options.onProgress
+    ? await readBytesWithProgress(datasetLocation, selectedChannel.sizeBytes, options.onProgress)
+    : await readBytes(datasetLocation);
   if (bytes.byteLength === 0) {
     throw new Error("Downloaded dataset is empty.");
   }
@@ -233,26 +236,4 @@ export async function syncDatasetOrThrow(
     channel,
     source: datasetLocation,
   };
-}
-
-export async function syncDataset(
-  config: OxfConfig,
-  options: SyncOptions = {},
-): Promise<SyncResult> {
-  const channel = options.channel ?? "stable";
-
-  try {
-    const result = await syncDatasetOrThrow(config, options);
-    return {
-      ...result,
-      success: true,
-    };
-  } catch (error) {
-    return {
-      version: "",
-      channel,
-      success: false,
-      error: error instanceof Error ? error.message : String(error),
-    };
-  }
 }

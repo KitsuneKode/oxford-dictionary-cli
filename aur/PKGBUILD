@@ -1,0 +1,16 @@
+# Maintainer: Manash Pratim Bhuyan <bhuyanmanash2002@gmail.com>
+# Contributor: Your Name <your@email>
+pkgname=oxf
+pkgver=0.2.0
+pkgrel=1
+pkgdesc="High-performance local-first dictionary CLI built with Bun"
+arch=('x86_64')
+url="https://github.com/KitsuneKode/oxford-dictionary-cli"
+license=('MIT')
+provides=('oxf')
+source=("${pkgname}-${pkgver}-linux-x64.tar.gz::https://github.com/KitsuneKode/oxford-dictionary-cli/releases/download/v${pkgver}/oxf-linux-x64-v${pkgver}.tar.gz")
+sha256sums=('2dc71e6e2fcde10b817f6ce124cecfc261b9409d48a11ac60b416b9b82f58f9a')
+
+package() {
+  install -Dm755 oxf "${pkgdir}/usr/bin/oxf"
+}

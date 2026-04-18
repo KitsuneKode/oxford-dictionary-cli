@@ -5,7 +5,7 @@ import { levenshteinDistance } from "../domain/levenshtein";
 import { lemmaCandidates } from "../domain/morphology";
 import { normalizeWord } from "../domain/normalize";
 import type { DictionaryEntry, OnlineEnrichment, OxfConfig, Suggestion } from "../types";
-import { syncDataset } from "../util/sync";
+import { syncDatasetOrThrow } from "../util/sync";
 import { applyPragmas } from "./pragmas";
 import { ensureSchema } from "./schema";
 import { seedCoreLexicon } from "./seed";
@@ -297,10 +297,11 @@ export async function openDictionaryStore(config: OxfConfig): Promise<Dictionary
     }
 
     if (needsSync) {
-      const result = await syncDataset(config, { channel: "stable" });
-      if (!result.success) {
+      try {
+        await syncDatasetOrThrow(config, { channel: "stable" });
+      } catch (error) {
         console.warn(
-          `Auto-sync failed (${result.error ?? "unknown error"}). Falling back to bundled core lexicon.`,
+          `Auto-sync failed (${error instanceof Error ? error.message : "unknown error"}). Falling back to bundled core lexicon.`,
         );
       }
     }
