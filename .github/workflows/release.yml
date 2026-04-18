@@ -186,3 +186,54 @@ jobs:
             "dist/release/${{ steps.package.outputs.binary_asset }}" \
             "dist/release/${{ steps.package.outputs.checksums_asset }}" \
             --clobber
+
+      - name: Extract binary checksum
+        id: checksum
+        if: steps.plan.outputs.should_upload_assets == 'true'
+        run: |
+          sha=$(grep "${{ steps.package.outputs.binary_asset }}" "dist/release/${{ steps.package.outputs.checksums_asset }}" | awk '{print $1}')
+          echo "sha256=$sha" >> "$GITHUB_OUTPUT"
+
+      - name: Publish to AUR
+        if: steps.plan.outputs.should_upload_assets == 'true'
+        env:
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+          AUR_USER: ${{ secrets.AUR_USER || 'kitsunekode' }}
+          PKGVER: ${{ steps.package.outputs.version }}
+          SHA256: ${{ steps.checksum.outputs.sha256 }}
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "$AUR_SSH_KEY" | sed 's/\\n/\n/g' > ~/.ssh/aur_key
+          chmod 600 ~/.ssh/aur_key
+          cat > ~/.ssh/config <<SSHEOF
+          Host aur.archlinux.org
+            IdentityFile ~/.ssh/aur_key
+            StrictHostKeyChecking no
+          SSHEOF
+
+          PKGNAME="oxf"
+          AUR_REPO="aur@aur.archlinux.org:${PKGNAME}.git"
+
+          TMPDIR=$(mktemp -d)
+          git clone "$AUR_REPO" "$TMPDIR"
+          cd "$TMPDIR"
+
+          # Update PKGBUILD with new version and checksum
+          sed -i "s/^pkgver=.*/pkgver=${PKGVER}/" PKGBUILD
+          sed -i "s/^pkgrel=.*/pkgrel=1/" PKGBUILD
+          sed -i "s/^sha256sums=.*/sha256sums=('${SHA256}')/" PKGBUILD
+
+          # Update source URL to use the release tag
+          sed -i "s|v\${pkgver}/oxf-linux|v${PKGVER}/oxf-linux|" PKGBUILD
+
+          # Regenerate .SRCINFO
+          makepkg --printsrcinfo > .SRCINFO
+
+          git config user.name "Manash Pratim Bhuyan"
+          git config user.email "bhuyanmanash2002@gmail.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to ${PKGVER}"
+          git push origin master
+
+          rm -rf "$TMPDIR"
