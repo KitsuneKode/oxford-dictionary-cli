@@ -19,7 +19,7 @@ function printHelp(): void {
 
 Usage:
   oxf <word>
-  oxf lookup <word> [--json] [--more] [--online] [--timeout <ms>] [--no-color]
+  oxf lookup <word> [--json] [--more] [--online] [--urban] [--timeout <ms>] [--no-color]
   oxf setup [--channel stable|latest] [--manifest <url-or-path>]
   oxf sync [--channel stable|latest] [--manifest <url-or-path>]
   oxf status
@@ -44,6 +44,7 @@ function parseLookupArgs(args: string[], defaultTimeout: number): ParsedLookup {
     online: false,
     timeoutMs: defaultTimeout,
     noColor: false,
+    urban: false,
   };
 
   for (let index = 0; index < args.length; index += 1) {
@@ -64,6 +65,11 @@ function parseLookupArgs(args: string[], defaultTimeout: number): ParsedLookup {
 
     if (token === "--online") {
       options.online = true;
+      continue;
+    }
+
+    if (token === "--urban") {
+      options.urban = true;
       continue;
     }
 

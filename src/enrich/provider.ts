@@ -40,6 +40,17 @@ interface DatamuseEntry {
   defs?: string[];
 }
 
+interface UrbanDictionaryDefinition {
+  definition?: string;
+  example?: string;
+  thumbs_up?: number;
+  thumbs_down?: number;
+}
+
+interface UrbanDictionaryResponse {
+  list?: UrbanDictionaryDefinition[];
+}
+
 function uniqueStrings(values: string[]): string[] {
   return [...new Set(values.filter(Boolean))];
 }
@@ -244,15 +255,73 @@ async function fetchFromDatamuse(
   };
 }
 
+async function fetchFromUrbanDictionary(
+  word: string,
+  timeoutMs: number,
+): Promise<OnlineEnrichment | null> {
+  const signal = AbortSignal.timeout(timeoutMs);
+  const response = await fetch(
+    `https://api.urbandictionary.com/v0/define?term=${encodeURIComponent(word)}`,
+    {
+      signal,
+    },
+  );
+
+  if (!response.ok) {
+    return null;
+  }
+
+  const payload = (await response.json()) as UrbanDictionaryResponse;
+
+  if (!payload.list?.length) {
+    return null;
+  }
+
+  const definitions: OnlineEnrichment["definitions"] = [];
+
+  for (const item of payload.list) {
+    if (!item.definition) {
+      continue;
+    }
+
+    const text = sanitizeText(item.definition);
+    if (!text) {
+      continue;
+    }
+
+    definitions.push({
+      pos: "slang",
+      text,
+      example: item.example ? sanitizeText(item.example) : undefined,
+      synonyms: [],
+      antonyms: [],
+    });
+  }
+
+  if (definitions.length === 0) {
+    return null;
+  }
+
+  return {
+    provider: "urbandictionary.com",
+    definitions,
+  };
+}
+
 export async function fetchOnlineEnrichment(
   word: string,
   timeoutMs: number,
+  options?: { includeUrban?: boolean },
 ): Promise<OnlineEnrichment | null> {
   const providers: Array<(word: string, timeoutMs: number) => Promise<OnlineEnrichment | null>> = [
     fetchFromDictionaryApi,
     fetchFromDatamuse,
     fetchFromWiktionary,
   ];
+
+  if (options?.includeUrban) {
+    providers.push(fetchFromUrbanDictionary);
+  }
   const deadlineAt = Date.now() + timeoutMs;
 
   for (const [index, provider] of providers.entries()) {

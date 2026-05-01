@@ -8,7 +8,7 @@ export async function askDetailChoice(currentWord: string, colorEnabled: boolean
   try {
     const highlightedWord = style(currentWord, "bold", { colorEnabled });
     const answer = await rl.question(
-      `[word: ${highlightedWord}] [M]ore [E]xamples [S]ynonyms [A]ntonyms [F]orms [O]nline [C]opy [Q]uit | type next word then Enter: `,
+      `[word: ${highlightedWord}] [M]ore [E]xamples [S]ynonyms [A]ntonyms [F]orms [O]nline [U]rban [C]opy [Q]uit | type next word then Enter: `,
     );
     return answer.trim();
   } finally {

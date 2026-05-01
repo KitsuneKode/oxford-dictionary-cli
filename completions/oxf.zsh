@@ -90,10 +90,5 @@ _oxf() {
 if [ "$funcstack[1]" = "_oxf" ]; then
   _oxf "$@"
 else
-  if ! (( $+functions[compdef] )); then
-    autoload -Uz compinit
-    compinit -i -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
-  fi
-
-  compdef _oxf oxf
+  (( $+functions[compdef] )) && compdef _oxf oxf
 fi

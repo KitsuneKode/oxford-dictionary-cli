@@ -4,6 +4,7 @@ export interface LookupOptions {
   online: boolean;
   timeoutMs: number;
   noColor: boolean;
+  urban: boolean;
 }
 
 export interface Sense {

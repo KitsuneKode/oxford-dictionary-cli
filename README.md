@@ -84,12 +84,37 @@ Published wrapper: `bin/oxf` (global command: `oxf`)
 
 ```bash
 oxf <word>
-oxf lookup <word> [--json] [--more] [--online] [--timeout <ms>] [--no-color]
+oxf lookup <word> [--json] [--more] [--online] [--urban] [--timeout <ms>] [--no-color]
 oxf sync [--channel stable|latest] [--manifest <url-or-path>]
 oxf status
 oxf doctor
 oxf config get <key>
 oxf config set <key> <value>
+```
+
+### Flags
+
+- `--online`: Force online enrichment lookup for definitions not found locally
+- `--urban`: Include Urban Dictionary slang definitions in online lookups
+- `--more`: Display extended information (examples, synonyms, antonyms)
+- `--json`: Output results in JSON format
+- `--timeout <ms>`: Set custom timeout for online lookups (default: 2000ms)
+- `--no-color`: Disable colored output
+
+### Examples
+
+```bash
+# Basic lookup
+oxf dogmatic
+
+# With extended info and Urban Dictionary slang
+oxf lit --more --urban
+
+# Force online lookup with slang definitions
+oxf vibe --online --urban
+
+# JSON output
+oxf word --json
 ```
 
 ## Shell autocomplete
@@ -106,7 +131,9 @@ Enable for current shell session:
 source ./completions/oxf.bash
 
 # zsh
-source ./completions/oxf.zsh
+fpath=("$PWD/completions" $fpath)
+autoload -Uz compinit
+compinit
 ```
 
 If completions still do not appear, reload zsh completion cache once:
@@ -129,7 +156,7 @@ cp ./completions/oxf.bash ~/.local/share/bash-completion/completions/oxf
 ```bash
 # zsh
 mkdir -p ~/.zsh/completions
-cp ./completions/oxf.zsh ~/.zsh/completions/_oxf
+cp ./completions/_oxf ~/.zsh/completions/_oxf
 ```
 
 Then add this to `~/.zshrc` if not already present:
@@ -137,8 +164,7 @@ Then add this to `~/.zshrc` if not already present:
 ```bash
 fpath=(~/.zsh/completions $fpath)
 autoload -Uz compinit
-compinit -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/.zcompdump-oxf"
-source ~/.zsh/completions/_oxf
+compinit
 ```
 
 ## How to use (practical)

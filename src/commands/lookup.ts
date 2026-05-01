@@ -107,7 +107,9 @@ async function getOnlineEnrichment(
 
   try {
     const timeoutMs = timeoutMsOverride ?? options.timeoutMs;
-    const enrichment = await fetchOnlineEnrichment(word, timeoutMs);
+    const enrichment = await fetchOnlineEnrichment(word, timeoutMs, {
+      includeUrban: options.urban,
+    });
     if (!enrichment) {
       return null;
     }
@@ -363,6 +365,18 @@ export async function runLookupCommand(input: LookupCommandInput): Promise<Looku
             latestOnline
               ? renderOnline(latestOnline, { colorEnabled })
               : "Online enrichment unavailable.",
+          );
+          break;
+        }
+        case "urban":
+        case "u": {
+          const urbanOptions = { ...options, urban: true };
+          latestOnline = await getOnlineEnrichment(entry.lemma, urbanOptions, config, store);
+          console.log();
+          console.log(
+            latestOnline
+              ? renderOnline(latestOnline, { colorEnabled })
+              : "Urban Dictionary enrichment unavailable.",
           );
           break;
         }
