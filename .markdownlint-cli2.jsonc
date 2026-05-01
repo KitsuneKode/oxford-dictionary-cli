@@ -5,5 +5,5 @@
     "MD029": false,
     "MD032": false
   },
-  "ignores": ["node_modules/**", ".worktrees/**", "CLAUDE.md"]
+  "ignores": ["node_modules/**", ".worktrees/**", "CLAUDE.md", "CHANGELOG.md"]
 }
